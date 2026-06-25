@@ -1,6 +1,6 @@
 import { activityItems, createDb } from "@mark-1/db";
 import { mockActivityItems, type ActivityPriority, type ActivitySource, type ActivityStatus } from "@mark-1/shared";
-import { desc } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isAuthorizedInternalWrite(request)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!process.env.DATABASE_URL) {
     return Response.json({ error: "DATABASE_URL is required to create activity items" }, { status: 503 });
   }
@@ -34,8 +38,24 @@ export async function POST(request: Request) {
   }
 
   const db = createDb();
+  const [existing] = await db
+    .select()
+    .from(activityItems)
+    .where(and(eq(activityItems.source, input.source), eq(activityItems.sourceId, input.sourceId)))
+    .limit(1);
+
+  if (existing) {
+    return Response.json({ item: existing, deduped: true });
+  }
+
   const [item] = await db.insert(activityItems).values(input).returning();
   return Response.json({ item }, { status: 201 });
+}
+
+function isAuthorizedInternalWrite(request: Request) {
+  const token = process.env.WHATSAPP_CONNECTOR_TOKEN;
+  if (!token) return true;
+  return request.headers.get("authorization") === `Bearer ${token}`;
 }
 
 function toCreateActivityInput(value: unknown) {

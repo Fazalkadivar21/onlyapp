@@ -23,6 +23,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - WhatsApp local QR scan connected successfully.
 - Cloudinary media wrapper added.
 - Unified Inbox source filters are interactive.
+- Incoming WhatsApp text/caption messages forward into `/api/activity-items` as normalized ActivityItems.
 
 ## Immediate priority
 
@@ -90,8 +91,8 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Confirm session survives restart.
 - [x] List chats/groups.
 - [ ] Select visible chats/groups.
-- [ ] Receive text messages.
-- [ ] Send text messages.
+- [x] Receive text messages.
+- [x] Send text messages.
 - [ ] Receive/download images/videos/files.
 - [ ] Upload media to Cloudinary.
 - [ ] Send images/videos/files.

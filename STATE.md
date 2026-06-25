@@ -24,6 +24,8 @@ Implemented:
 - WhatsApp local QR scan reached connected state (`/health` reported `status: connected` and 6 chats).
 - Cloudinary media config/upload/delete wrapper in `packages/integrations`.
 - Interactive source filters on Unified Inbox.
+- Incoming WhatsApp text/caption messages are normalized and forwarded to web `POST /api/activity-items` when `APP_URL` is set.
+- Web activity item POST supports optional bearer auth via `WHATSAPP_CONNECTOR_TOKEN` and dedupes by source/sourceId.
 - `.env.example` with required environment variable names only.
 - `RAILWAY.md` deployment notes for web, worker, and WhatsApp connector services.
 
@@ -58,6 +60,7 @@ packages/integrations
 - `timeout 3 node apps/whatsapp-connector/dist/index.js` — server starts successfully.
 - User manually confirmed WhatsApp `/health` returns connected.
 - Re-ran typecheck/build/lint after Cloudinary wrapper + inbox filters — passed.
+- Re-ran typecheck/build/lint after WhatsApp incoming ActivityItem forwarding — passed.
 
 Notes:
 
@@ -82,8 +85,8 @@ Notes:
 ## Next agent should do
 
 1. Verify WhatsApp session survives connector restart and decide hosted session persistence/encryption strategy.
-2. Wire incoming WhatsApp text messages into normalized ActivityItems.
-3. Add Cloudinary upload handling to WhatsApp media receive/send path.
+2. Add Cloudinary upload handling to WhatsApp media receive/send path.
+3. Add selected WhatsApp chats/groups filtering before persisting all incoming messages.
 4. Add DB migrations generation once `DATABASE_URL` target is confirmed.
 
 ## Known blockers / missing information
