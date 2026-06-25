@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { getWhatsAppState, listWhatsAppChats, sendWhatsAppText, startWhatsApp } from "./whatsapp.js";
+import { getWhatsAppState, listSelectedWhatsAppChats, listWhatsAppChats, sendWhatsAppText, setSelectedWhatsAppChats, startWhatsApp } from "./whatsapp.js";
 
 const app = new Hono();
 
@@ -17,6 +17,18 @@ app.get("/qr", async (c) => {
 });
 
 app.get("/chats", (c) => c.json({ chats: listWhatsAppChats() }));
+
+app.get("/selected-chats", (c) => c.json({ chatIds: listSelectedWhatsAppChats() }));
+
+app.post("/selected-chats", async (c) => {
+  const body = await c.req.json().catch(() => null);
+
+  if (!isSelectedChatsBody(body)) {
+    return c.json({ error: "Expected JSON body: { chatIds: string[] }" }, 400);
+  }
+
+  return c.json({ chatIds: setSelectedWhatsAppChats(body.chatIds) });
+});
 
 app.post("/send", async (c) => {
   const body = await c.req.json().catch(() => null);
@@ -45,4 +57,8 @@ if (process.env.WHATSAPP_AUTO_CONNECT === "true") {
 
 function isSendTextBody(value: unknown): value is { to: string; text: string } {
   return typeof value === "object" && value !== null && "to" in value && "text" in value && typeof value.to === "string" && typeof value.text === "string";
+}
+
+function isSelectedChatsBody(value: unknown): value is { chatIds: string[] } {
+  return typeof value === "object" && value !== null && "chatIds" in value && Array.isArray(value.chatIds) && value.chatIds.every((chatId) => typeof chatId === "string");
 }

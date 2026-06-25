@@ -25,6 +25,7 @@ Implemented:
 - Cloudinary media config/upload/delete wrapper in `packages/integrations`.
 - Interactive source filters on Unified Inbox.
 - Incoming WhatsApp text/caption messages are normalized and forwarded to web `POST /api/activity-items` when `APP_URL` is set.
+- WhatsApp connector only forwards selected chats/groups, configured by `WHATSAPP_SELECTED_CHATS` or `POST /selected-chats`.
 - Web activity item POST supports optional bearer auth via `WHATSAPP_CONNECTOR_TOKEN` and dedupes by source/sourceId.
 - `.env.example` with required environment variable names only.
 - `RAILWAY.md` deployment notes for web, worker, and WhatsApp connector services.
@@ -61,6 +62,7 @@ packages/integrations
 - User manually confirmed WhatsApp `/health` returns connected.
 - Re-ran typecheck/build/lint after Cloudinary wrapper + inbox filters — passed.
 - Re-ran typecheck/build/lint after WhatsApp incoming ActivityItem forwarding — passed.
+- Re-ran typecheck/build/lint after WhatsApp selected-chat filtering — passed.
 
 Notes:
 
@@ -86,7 +88,7 @@ Notes:
 
 1. Verify WhatsApp session survives connector restart and decide hosted session persistence/encryption strategy.
 2. Add Cloudinary upload handling to WhatsApp media receive/send path.
-3. Add selected WhatsApp chats/groups filtering before persisting all incoming messages.
+3. Build a small web UI for selecting WhatsApp chats/groups via connector APIs.
 4. Add DB migrations generation once `DATABASE_URL` target is confirmed.
 
 ## Known blockers / missing information

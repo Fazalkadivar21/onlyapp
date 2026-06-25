@@ -35,6 +35,7 @@ let status: ConnectionStatus = "idle";
 let latestQr: string | null = null;
 let lastError: string | null = null;
 const chats = new Map<string, ChatSummary>();
+const selectedChatIds = new Set(parseCsv(process.env.WHATSAPP_SELECTED_CHATS));
 
 export async function startWhatsApp() {
   if (socket || status === "connecting") return getWhatsAppState();
@@ -126,12 +127,27 @@ export function getWhatsAppState() {
     qr: latestQr,
     lastError,
     sessionDir,
-    chats: chats.size
+    chats: chats.size,
+    selectedChats: selectedChatIds.size
   };
 }
 
 export function listWhatsAppChats() {
-  return [...chats.values()].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+  return [...chats.values()]
+    .map((chat) => ({ ...chat, selected: selectedChatIds.has(chat.id) }))
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+}
+
+export function listSelectedWhatsAppChats() {
+  return [...selectedChatIds];
+}
+
+export function setSelectedWhatsAppChats(chatIds: string[]) {
+  selectedChatIds.clear();
+  for (const chatId of chatIds) {
+    if (chatId.trim()) selectedChatIds.add(chatId.trim());
+  }
+  return listSelectedWhatsAppChats();
 }
 
 export async function sendWhatsAppText(input: SendTextInput) {
@@ -154,7 +170,7 @@ async function forwardIncomingMessage(message: WAMessage) {
   const messageId = message.key.id;
   const text = extractText(message);
 
-  if (!remoteJid || !messageId || !text) return;
+  if (!remoteJid || !messageId || !text || !selectedChatIds.has(remoteJid)) return;
 
   const chat = chats.get(remoteJid);
   const actorName = message.pushName ?? chat?.name ?? remoteJid;
@@ -185,6 +201,13 @@ async function forwardIncomingMessage(message: WAMessage) {
   if (!response.ok) {
     throw new Error(`Failed to forward WhatsApp message: ${response.status}`);
   }
+}
+
+function parseCsv(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function extractText(message: WAMessage) {

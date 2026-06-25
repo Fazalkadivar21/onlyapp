@@ -24,6 +24,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Cloudinary media wrapper added.
 - Unified Inbox source filters are interactive.
 - Incoming WhatsApp text/caption messages forward into `/api/activity-items` as normalized ActivityItems.
+- WhatsApp incoming forwarding is limited to selected chats/groups via `WHATSAPP_SELECTED_CHATS` or `/selected-chats`.
 
 ## Immediate priority
 
@@ -90,7 +91,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Deploy connector to Railway.
 - [ ] Confirm session survives restart.
 - [x] List chats/groups.
-- [ ] Select visible chats/groups.
+- [x] Select visible chats/groups.
 - [x] Receive text messages.
 - [x] Send text messages.
 - [ ] Receive/download images/videos/files.
