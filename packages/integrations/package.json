@@ -1,0 +1,21 @@
+{
+  "name": "@mark-1/integrations",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:secrets": "tsx src/secrets-check.ts"
+  },
+  "dependencies": {
+    "@mark-1/shared": "workspace:*",
+    "cloudinary": "^2.10.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
