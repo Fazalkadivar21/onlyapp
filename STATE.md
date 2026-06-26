@@ -42,6 +42,7 @@ Implemented:
 - Slack OAuth routes exist under `/api/integrations/slack/oauth/start` and `/callback`; callback exchanges the code, creates a default single-user record when needed, stores integration metadata, and inserts encrypted Slack token payload into `integration_secrets`.
 - Workspace shell includes a client command palette opened with ⌘K/Ctrl+K for quick page navigation.
 - Activity feeds and integration panels now show skeleton loading cards plus retryable error notices for failed fetches.
+- Unified Inbox search now queries `/api/activity-items` by title/body/actor/type and supports source/status/priority query filters with mock fallback.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
 - DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, note links, AI summary cache lookups, and sync job health queries.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
@@ -113,6 +114,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Jira sprint progress widget — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
 - Ran `pnpm db:generate` after adding `note_links` — passed and generated `packages/db/drizzle/0001_fancy_leopardon.sql`.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after ActivityItem linked-note creation — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Inbox ActivityItem search — passed.
 
 Notes:
 

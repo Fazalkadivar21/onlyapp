@@ -14,7 +14,8 @@ export function InboxExplorer() {
   const [selectedItem, setSelectedItem] = useState<ActivityItem | undefined>();
   const [itemOverrides, setItemOverrides] = useState<Record<string, Partial<ActivityItem>>>({});
   const [replyTarget, setReplyTarget] = useState<{ chatId: string; draft?: string; nonce: number } | undefined>();
-  const filter = activeFilter === "all" ? {} : { sources: [activeFilter] };
+  const [search, setSearch] = useState("");
+  const filter = activeFilter === "all" ? { q: search } : { sources: [activeFilter], q: search };
 
   async function createLinkedNote(item: ActivityItem) {
     const response = await fetch("/api/notes", {
@@ -50,6 +51,16 @@ export function InboxExplorer() {
   return (
     <div>
       <WhatsAppComposer replyTarget={replyTarget} />
+      <div className="mb-4 rounded-3xl bg-white p-3 shadow-sm">
+        <label className="sr-only" htmlFor="inbox-search">Search inbox</label>
+        <input
+          id="inbox-search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search messages, PRs, tickets, actors…"
+          className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white"
+        />
+      </div>
       <div className="mb-5 flex flex-wrap gap-2 text-sm">
         {filters.map((source) => (
           <button

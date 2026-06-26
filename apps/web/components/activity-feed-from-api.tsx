@@ -16,10 +16,11 @@ type Filter = {
   priorities?: ActivityPriority[];
   statuses?: ActivityStatus[];
   actionOnly?: boolean;
+  q?: string;
 };
 
 export function ActivityFeedFromApi({ filter = {}, selectedId, itemOverrides = {}, onSelect }: { filter?: Filter; selectedId?: string; itemOverrides?: Record<string, Partial<ActivityItem>>; onSelect?: (item: ActivityItem) => void }) {
-  const { items, source, error, loading, retry } = useActivityItems();
+  const { items, source, error, loading, retry } = useActivityItems(filter);
   const mergedItems = useMemo(() => items.map((item) => ({ ...item, ...itemOverrides[item.id] })), [items, itemOverrides]);
   const filteredItems = useMemo(() => filterItems(mergedItems, filter), [mergedItems, filter]);
 
@@ -54,7 +55,8 @@ export function ActivityStatsFromApi() {
   );
 }
 
-function useActivityItems() {
+function useActivityItems(filter: Filter = {}) {
+  const queryString = toQueryString(filter);
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [source, setSource] = useState<ActivityItemsResponse["source"]>("mock");
   const [error, setError] = useState<string | undefined>();
@@ -66,7 +68,7 @@ function useActivityItems() {
     setLoading(true);
     setError(undefined);
 
-    fetch("/api/activity-items")
+    fetch(`/api/activity-items${queryString}`)
       .then((response) => response.json() as Promise<ActivityItemsResponse>)
       .then((data) => {
         if (cancelled) return;
@@ -88,7 +90,7 @@ function useActivityItems() {
     return () => {
       cancelled = true;
     };
-  }, [retryNonce]);
+  }, [retryNonce, queryString]);
 
   return { items, source, error, loading, retry: () => setRetryNonce((value) => value + 1) };
 }
@@ -99,6 +101,21 @@ function filterItems(items: ActivityItem[], filter: Filter) {
     if (filter.priorities && !filter.priorities.includes(item.priority)) return false;
     if (filter.statuses && !filter.statuses.includes(item.status)) return false;
     if (filter.actionOnly && item.status !== "unread" && item.priority !== "urgent" && item.priority !== "high") return false;
+    if (filter.q) {
+      const query = filter.q.toLowerCase();
+      const haystack = `${item.title} ${item.body} ${item.actorName} ${item.type}`.toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
     return true;
   });
+}
+
+function toQueryString(filter: Filter) {
+  const params = new URLSearchParams();
+  if (filter.sources?.length) params.set("sources", filter.sources.join(","));
+  if (filter.priorities?.length) params.set("priorities", filter.priorities.join(","));
+  if (filter.statuses?.length) params.set("statuses", filter.statuses.join(","));
+  if (filter.q?.trim()) params.set("q", filter.q.trim());
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }

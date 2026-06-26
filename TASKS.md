@@ -48,6 +48,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - GitHub PR panel/sync now includes created PRs, review requests, mentions, merged PRs, and failing-check PRs as distinct ActivityItems.
 - Jira integration panel now shows a sprint progress widget with done/in-progress/todo/blocked/unassigned counts and status breakdown.
 - Notes can now be created from ActivityItems via the inbox detail panel, with `note_links` persisted in DB.
+- Unified Inbox now has text search backed by `/api/activity-items?q=...`, including synced WhatsApp ActivityItems.
 
 ## Immediate priority
 
@@ -127,7 +128,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Send images/videos/files.
 - [ ] Implement quote reply if supported.
 - [ ] Implement group mentions if reliable.
-- [ ] Search synced WhatsApp messages.
+- [x] Search synced WhatsApp messages.
 
 ### GitHub integration
 

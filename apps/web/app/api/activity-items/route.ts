@@ -1,6 +1,6 @@
 import { activityItems, createDb } from "@mark-1/db";
-import { mockActivityItems, type ActivityPriority, type ActivitySource, type ActivityStatus } from "@mark-1/shared";
-import { and, desc, eq } from "drizzle-orm";
+import { mockActivityItems, type ActivityItem, type ActivityPriority, type ActivitySource, type ActivityStatus } from "@mark-1/shared";
+import { and, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -8,18 +8,27 @@ const sources: ActivitySource[] = ["slack", "whatsapp", "github", "jira"];
 const priorities: ActivityPriority[] = ["low", "normal", "high", "urgent"];
 const statuses: ActivityStatus[] = ["unread", "seen", "done", "snoozed"];
 
-export async function GET() {
+export async function GET(request: Request) {
+  const query = parseActivityQuery(new URL(request.url).searchParams);
+
   if (!process.env.DATABASE_URL) {
-    return Response.json({ items: mockActivityItems, source: "mock" });
+    return Response.json({ items: filterMockItems(mockActivityItems, query), source: "mock" });
   }
 
   try {
     const db = createDb();
-    const items = await db.select().from(activityItems).orderBy(desc(activityItems.createdAt)).limit(100);
+    const conditions = buildActivityConditions(query);
+    const items = await db
+      .select()
+      .from(activityItems)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(activityItems.createdAt))
+      .limit(query.limit)
+      .offset(query.offset);
     return Response.json({ items, source: "database" });
   } catch (error) {
     console.error("Failed to list activity items", error instanceof Error ? error.message : "unknown error");
-    return Response.json({ items: mockActivityItems, source: "mock", error: "database_unavailable" });
+    return Response.json({ items: filterMockItems(mockActivityItems, query), source: "mock", error: "database_unavailable" });
   }
 }
 
@@ -80,6 +89,82 @@ function isAuthorizedInternalWrite(request: Request) {
   const token = process.env.WHATSAPP_CONNECTOR_TOKEN;
   if (!token) return true;
   return request.headers.get("authorization") === `Bearer ${token}`;
+}
+
+type ActivityQuery = {
+  sources: ActivitySource[];
+  priorities: ActivityPriority[];
+  statuses: ActivityStatus[];
+  q?: string;
+  limit: number;
+  offset: number;
+};
+
+function parseActivityQuery(searchParams: URLSearchParams): ActivityQuery {
+  return {
+    sources: parseEnumList(searchParams.get("sources"), sources),
+    priorities: parseEnumList(searchParams.get("priorities"), priorities),
+    statuses: parseEnumList(searchParams.get("statuses"), statuses),
+    q: cleanSearch(searchParams.get("q")),
+    limit: clampNumber(searchParams.get("limit"), 1, 100, 100),
+    offset: clampNumber(searchParams.get("offset"), 0, 10_000, 0)
+  };
+}
+
+function buildActivityConditions(query: ActivityQuery) {
+  const conditions: SQL[] = [];
+
+  if (query.sources.length > 0) conditions.push(inArray(activityItems.source, query.sources));
+  if (query.priorities.length > 0) conditions.push(inArray(activityItems.priority, query.priorities));
+  if (query.statuses.length > 0) conditions.push(inArray(activityItems.status, query.statuses));
+  if (query.q) {
+    const pattern = `%${escapeLike(query.q)}%`;
+    const textMatch = or(
+      ilike(activityItems.title, pattern),
+      ilike(activityItems.body, pattern),
+      ilike(activityItems.actorName, pattern),
+      ilike(activityItems.type, pattern)
+    );
+    if (textMatch) conditions.push(textMatch);
+  }
+
+  return conditions;
+}
+
+function filterMockItems(items: ActivityItem[], query: ActivityQuery) {
+  return items
+    .filter((item) => {
+      if (query.sources.length > 0 && !query.sources.includes(item.source)) return false;
+      if (query.priorities.length > 0 && !query.priorities.includes(item.priority)) return false;
+      if (query.statuses.length > 0 && !query.statuses.includes(item.status)) return false;
+      if (query.q) {
+        const haystack = `${item.title} ${item.body} ${item.actorName} ${item.type}`.toLowerCase();
+        if (!haystack.includes(query.q.toLowerCase())) return false;
+      }
+      return true;
+    })
+    .slice(query.offset, query.offset + query.limit);
+}
+
+function parseEnumList<T extends string>(value: string | null, allowed: T[]) {
+  if (!value) return [];
+  const selected = value.split(",").filter((item): item is T => isOneOf(item, allowed));
+  return [...new Set(selected)];
+}
+
+function cleanSearch(value: string | null) {
+  const cleaned = value?.trim();
+  return cleaned ? cleaned.slice(0, 120) : undefined;
+}
+
+function clampNumber(value: string | null, min: number, max: number, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) return fallback;
+  return Math.min(Math.max(parsed, min), max);
+}
+
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
 }
 
 function toUpdateActivityInput(value: unknown) {
