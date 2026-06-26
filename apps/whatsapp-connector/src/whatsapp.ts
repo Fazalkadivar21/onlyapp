@@ -1,11 +1,16 @@
 import makeWASocket, {
   Browsers,
   DisconnectReason,
+  downloadMediaMessage,
   fetchLatestBaileysVersion,
   type WAMessage,
   type WASocket,
   useMultiFileAuthState
 } from "@whiskeysockets/baileys";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { v2 as cloudinary } from "cloudinary";
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 
@@ -25,7 +30,24 @@ type SendTextInput = {
   text: string;
 };
 
+type SendMediaInput = {
+  to: string;
+  mediaUrl: string;
+  mediaType: "image" | "video" | "document" | "audio";
+  caption?: string;
+  fileName?: string;
+  mimeType?: string;
+};
+
+type MediaInfo = {
+  kind: "image" | "video" | "document" | "audio";
+  mimeType?: string;
+  fileName?: string;
+  caption?: string;
+};
+
 const sessionDir = process.env.WHATSAPP_SESSION_DIR ?? ".data/whatsapp-session";
+const sessionBackupFile = process.env.WHATSAPP_SESSION_BACKUP_FILE ?? `${sessionDir}.enc`;
 const logger = pino({ level: process.env.WHATSAPP_LOG_LEVEL ?? "silent" });
 const appUrl = process.env.APP_URL;
 const connectorToken = process.env.WHATSAPP_CONNECTOR_TOKEN;
@@ -34,6 +56,8 @@ let socket: WASocket | undefined;
 let status: ConnectionStatus = "idle";
 let latestQr: string | null = null;
 let lastError: string | null = null;
+let lastSessionBackupAt: string | null = null;
+let lastSessionBackupError: string | null = null;
 const chats = new Map<string, ChatSummary>();
 const selectedChatIds = new Set(parseCsv(process.env.WHATSAPP_SELECTED_CHATS));
 
@@ -43,6 +67,7 @@ export async function startWhatsApp() {
   status = "connecting";
   lastError = null;
 
+  await restoreSessionBackupIfNeeded();
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
   const { version } = await fetchLatestBaileysVersion();
 
@@ -54,7 +79,12 @@ export async function startWhatsApp() {
     version
   });
 
-  socket.ev.on("creds.update", saveCreds);
+  socket.ev.on("creds.update", async () => {
+    await saveCreds();
+    await backupSession().catch((error: unknown) => {
+      lastSessionBackupError = error instanceof Error ? error.message : "session_backup_failed";
+    });
+  });
 
   socket.ev.on("connection.update", (update) => {
     if (update.qr) {
@@ -127,6 +157,10 @@ export function getWhatsAppState() {
     qr: latestQr,
     lastError,
     sessionDir,
+    sessionBackupConfigured: Boolean(process.env.ENCRYPTION_KEY),
+    sessionBackupFile: process.env.ENCRYPTION_KEY ? sessionBackupFile : null,
+    lastSessionBackupAt,
+    lastSessionBackupError,
     chats: chats.size,
     selectedChats: selectedChatIds.size
   };
@@ -151,16 +185,39 @@ export function setSelectedWhatsAppChats(chatIds: string[]) {
 }
 
 export async function sendWhatsAppText(input: SendTextInput) {
-  if (!socket || status !== "connected") {
-    throw new Error("WhatsApp is not connected");
-  }
+  const connectedSocket = getConnectedSocket();
 
   if (!input.to || !input.text) {
     throw new Error("Both 'to' and 'text' are required");
   }
 
-  const result = await socket.sendMessage(input.to, { text: input.text });
+  const result = await connectedSocket.sendMessage(input.to, { text: input.text });
   return { id: result?.key.id ?? null, to: input.to };
+}
+
+export async function sendWhatsAppMedia(input: SendMediaInput) {
+  const connectedSocket = getConnectedSocket();
+
+  if (!input.to || !input.mediaUrl || !input.mediaType) {
+    throw new Error("'to', 'mediaUrl', and 'mediaType' are required");
+  }
+
+  const media = { url: input.mediaUrl };
+  const message =
+    input.mediaType === "image" ? { image: media, caption: input.caption } :
+    input.mediaType === "video" ? { video: media, caption: input.caption } :
+    input.mediaType === "audio" ? { audio: media, mimetype: input.mimeType } :
+    { document: media, fileName: input.fileName ?? "file", mimetype: input.mimeType ?? "application/octet-stream", caption: input.caption };
+
+  const result = await connectedSocket.sendMessage(input.to, message);
+  return { id: result?.key.id ?? null, to: input.to };
+}
+
+function getConnectedSocket() {
+  if (!socket || status !== "connected") {
+    throw new Error("WhatsApp is not connected");
+  }
+  return socket;
 }
 
 async function forwardIncomingMessage(message: WAMessage) {
@@ -168,10 +225,12 @@ async function forwardIncomingMessage(message: WAMessage) {
 
   const remoteJid = message.key.remoteJid;
   const messageId = message.key.id;
-  const text = extractText(message);
+  const media = extractMediaInfo(message);
+  const text = extractText(message) ?? (media ? `[${media.kind}]` : null);
 
   if (!remoteJid || !messageId || !text || !selectedChatIds.has(remoteJid)) return;
 
+  const uploadedMedia = media ? await uploadIncomingMedia(message, messageId, media) : null;
   const chat = chats.get(remoteJid);
   const actorName = message.pushName ?? chat?.name ?? remoteJid;
   const response = await fetch(new URL("/api/activity-items", appUrl), {
@@ -193,7 +252,8 @@ async function forwardIncomingMessage(message: WAMessage) {
         chatId: remoteJid,
         messageId,
         fromMe: false,
-        receivedAt: message.messageTimestamp ? Number(message.messageTimestamp) : undefined
+        receivedAt: message.messageTimestamp ? Number(message.messageTimestamp) : undefined,
+        media: uploadedMedia
       }
     })
   });
@@ -222,4 +282,155 @@ function extractText(message: WAMessage) {
     content.documentMessage?.caption ??
     null
   );
+}
+
+function extractMediaInfo(message: WAMessage): MediaInfo | null {
+  const content = message.message;
+  if (!content) return null;
+
+  if (content.imageMessage) return { kind: "image", mimeType: content.imageMessage.mimetype ?? undefined, caption: content.imageMessage.caption ?? undefined };
+  if (content.videoMessage) return { kind: "video", mimeType: content.videoMessage.mimetype ?? undefined, caption: content.videoMessage.caption ?? undefined };
+  if (content.documentMessage) {
+    return {
+      kind: "document",
+      mimeType: content.documentMessage.mimetype ?? undefined,
+      fileName: content.documentMessage.fileName ?? undefined,
+      caption: content.documentMessage.caption ?? undefined
+    };
+  }
+  if (content.audioMessage) return { kind: "audio", mimeType: content.audioMessage.mimetype ?? undefined };
+
+  return null;
+}
+
+async function uploadIncomingMedia(message: WAMessage, messageId: string, media: MediaInfo) {
+  if (!hasCloudinaryConfig()) {
+    return { kind: media.kind, mimeType: media.mimeType, fileName: media.fileName, uploadStatus: "skipped_missing_cloudinary_config" };
+  }
+
+  if (!socket) return { kind: media.kind, mimeType: media.mimeType, fileName: media.fileName, uploadStatus: "skipped_not_connected" };
+
+  const buffer = await downloadMediaMessage(message, "buffer", {}, { logger, reuploadRequest: socket.updateMediaMessage });
+  const dataUri = `data:${media.mimeType ?? "application/octet-stream"};base64,${Buffer.from(buffer).toString("base64")}`;
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
+
+  const uploaded = await cloudinary.uploader.upload(dataUri, {
+    folder: "mark-1/whatsapp",
+    public_id: `wa_${messageId.replace(/[^a-zA-Z0-9_-]/g, "_")}`,
+    resource_type: media.kind === "image" ? "image" : media.kind === "video" ? "video" : "raw",
+    tags: ["whatsapp", media.kind]
+  });
+
+  return {
+    kind: media.kind,
+    mimeType: media.mimeType,
+    fileName: media.fileName,
+    uploadStatus: "uploaded",
+    url: uploaded.secure_url,
+    publicId: uploaded.public_id,
+    bytes: uploaded.bytes,
+    resourceType: uploaded.resource_type
+  };
+}
+
+type SessionArchive = {
+  version: 1;
+  files: Array<{ relativePath: string; data: string }>;
+};
+
+async function restoreSessionBackupIfNeeded() {
+  if (!process.env.ENCRYPTION_KEY || !(await fileExists(sessionBackupFile)) || !(await isDirectoryEmpty(sessionDir))) return;
+
+  const encrypted = await readFile(sessionBackupFile, "utf8");
+  const archive = JSON.parse(decryptString(encrypted, process.env.ENCRYPTION_KEY)) as SessionArchive;
+  if (archive.version !== 1 || !Array.isArray(archive.files)) throw new Error("Invalid WhatsApp session backup");
+
+  for (const file of archive.files) {
+    const targetPath = safeJoin(sessionDir, file.relativePath);
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, Buffer.from(file.data, "base64"));
+  }
+}
+
+async function backupSession() {
+  if (!process.env.ENCRYPTION_KEY || !(await fileExists(sessionDir))) return;
+
+  const files = await collectSessionFiles(sessionDir);
+  if (files.length === 0) return;
+
+  const archive: SessionArchive = { version: 1, files };
+  await mkdir(path.dirname(sessionBackupFile), { recursive: true });
+  await writeFile(sessionBackupFile, encryptString(JSON.stringify(archive), process.env.ENCRYPTION_KEY), "utf8");
+  lastSessionBackupAt = new Date().toISOString();
+  lastSessionBackupError = null;
+}
+
+async function collectSessionFiles(root: string, current = root): Promise<SessionArchive["files"]> {
+  const entries = await readdir(current, { withFileTypes: true }).catch(() => []);
+  const files: SessionArchive["files"] = [];
+  const backupPath = path.resolve(sessionBackupFile);
+
+  for (const entry of entries) {
+    const fullPath = path.join(current, entry.name);
+    if (path.resolve(fullPath) === backupPath) continue;
+
+    if (entry.isDirectory()) {
+      files.push(...(await collectSessionFiles(root, fullPath)));
+      continue;
+    }
+
+    if (!entry.isFile()) continue;
+    files.push({
+      relativePath: path.relative(root, fullPath),
+      data: (await readFile(fullPath)).toString("base64")
+    });
+  }
+
+  return files;
+}
+
+async function isDirectoryEmpty(directory: string) {
+  const entries = await readdir(directory).catch(() => []);
+  return entries.length === 0;
+}
+
+async function fileExists(filePath: string) {
+  return stat(filePath).then(() => true).catch(() => false);
+}
+
+function safeJoin(root: string, relativePath: string) {
+  const targetPath = path.resolve(root, relativePath);
+  const rootPath = path.resolve(root);
+  if (!targetPath.startsWith(`${rootPath}${path.sep}`) && targetPath !== rootPath) {
+    throw new Error("Invalid session backup path");
+  }
+  return targetPath;
+}
+
+function encryptString(plaintext: string, secret: string) {
+  const iv = randomBytes(12);
+  const key = createHash("sha256").update(secret).digest();
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString("base64")}.${tag.toString("base64")}.${encrypted.toString("base64")}`;
+}
+
+function decryptString(payload: string, secret: string) {
+  const [ivBase64, tagBase64, encryptedBase64] = payload.split(".");
+  if (!ivBase64 || !tagBase64 || !encryptedBase64) throw new Error("Invalid encrypted session backup");
+
+  const key = createHash("sha256").update(secret).digest();
+  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivBase64, "base64"));
+  decipher.setAuthTag(Buffer.from(tagBase64, "base64"));
+  return Buffer.concat([decipher.update(Buffer.from(encryptedBase64, "base64")), decipher.final()]).toString("utf8");
+}
+
+function hasCloudinaryConfig() {
+  return Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 }

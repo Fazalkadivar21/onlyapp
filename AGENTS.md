@@ -55,6 +55,7 @@ After coding:
 1. Run typecheck/lint/tests when available.
 2. Note any commands run and results.
 3. Update `STATE.md` with current status and next steps.
+4. Commit completed coherent changes before handing back, unless the user explicitly asks not to commit or validation is failing.
 
 ## Technical assumptions
 

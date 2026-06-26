@@ -1,5 +1,9 @@
 import type { ActivityItem, ActivitySource } from "@mark-1/shared";
 
+export { createAiProvider, type AiProviderName } from "./ai";
+export { fetchGitHubPullRequests, normalizeGitHubPullRequest, type GitHubPullRequest } from "./github";
+export { fetchJiraActiveSprintIssues, normalizeJiraIssue, type JiraIssue, type JiraSprint } from "./jira";
+export { fetchSlackChannels, fetchSlackSelectedChannelMessages, normalizeSlackMessage, parseSlackSelectedChannels, type SlackChannel, type SlackMessage } from "./slack";
 export { deleteMedia, configureCloudinary, getCloudinaryConfig, uploadMedia, type CloudinaryConfig, type UploadMediaInput } from "./media";
 export { decryptSecret, encryptSecret, type EncryptedSecret } from "./secrets";
 
@@ -27,11 +31,6 @@ export interface MessagingIntegration {
 export interface SyncIntegration {
   source: ActivitySource;
   sync(): Promise<NormalizedExternalEvent[]>;
-}
-
-export interface AiProvider {
-  name: "openai" | "anthropic" | "ollama";
-  summarize(prompt: string): Promise<string>;
 }
 
 export function normalizeEvent(event: NormalizedExternalEvent): ActivityItem {

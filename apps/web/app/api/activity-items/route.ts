@@ -23,6 +23,30 @@ export async function GET() {
   }
 }
 
+export async function PATCH(request: Request) {
+  if (!process.env.DATABASE_URL) {
+    return Response.json({ error: "DATABASE_URL is required to update activity items" }, { status: 503 });
+  }
+
+  const input = toUpdateActivityInput(await request.json().catch(() => null));
+  if (!input) {
+    return Response.json({ error: "Invalid activity item update payload" }, { status: 400 });
+  }
+
+  const db = createDb();
+  const [item] = await db
+    .update(activityItems)
+    .set({ status: input.status, updatedAt: new Date() })
+    .where(eq(activityItems.id, input.id))
+    .returning();
+
+  if (!item) {
+    return Response.json({ error: "Activity item not found" }, { status: 404 });
+  }
+
+  return Response.json({ item });
+}
+
 export async function POST(request: Request) {
   if (!isAuthorizedInternalWrite(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,6 +80,16 @@ function isAuthorizedInternalWrite(request: Request) {
   const token = process.env.WHATSAPP_CONNECTOR_TOKEN;
   if (!token) return true;
   return request.headers.get("authorization") === `Bearer ${token}`;
+}
+
+function toUpdateActivityInput(value: unknown) {
+  if (!isRecord(value)) return null;
+
+  const id = stringValue(value.id);
+  const status = stringValue(value.status);
+  if (!id || !status || !isOneOf(status, statuses)) return null;
+
+  return { id, status };
 }
 
 function toCreateActivityInput(value: unknown) {

@@ -154,3 +154,17 @@ Architecture Decision Record log for mark-1.
 - Web, worker, and WhatsApp connector can be built/deployed independently.
 - Shared packages remain simple TypeScript packages.
 - Turborepo may warn for no-output type-only package builds until package build outputs are introduced.
+
+## ADR-012 — Encrypt WhatsApp session backup for hosted persistence
+
+**Status:** Accepted
+
+**Decision:** The WhatsApp connector may use Baileys multi-file auth during runtime, but it should also maintain an encrypted backup file using `ENCRYPTION_KEY` and `WHATSAPP_SESSION_BACKUP_FILE`.
+
+**Rationale:** Railway/container filesystems can be ephemeral. The connector needs a restart survival path without committing or logging WhatsApp credentials. An encrypted backup file can live on durable storage while keeping the implementation lightweight for v0.1.
+
+**Consequences:**
+
+- `ENCRYPTION_KEY` is required for encrypted session backup/restore.
+- The runtime session directory may still contain decrypted Baileys session files while the connector is running.
+- Restart survival still needs validation on Railway with durable storage attached for the backup file.

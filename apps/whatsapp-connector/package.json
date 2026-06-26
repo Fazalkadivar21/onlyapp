@@ -13,6 +13,7 @@
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "@whiskeysockets/baileys": "7.0.0-rc13",
+    "cloudinary": "^2.10.0",
     "hono": "^4.6.16",
     "pino": "^10.3.1",
     "qrcode-terminal": "^0.12.0"

@@ -25,6 +25,18 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Unified Inbox source filters are interactive.
 - Incoming WhatsApp text/caption messages forward into `/api/activity-items` as normalized ActivityItems.
 - WhatsApp incoming forwarding is limited to selected chats/groups via `WHATSAPP_SELECTED_CHATS` or `/selected-chats`.
+- Integrations page has a WhatsApp panel for connector status, QR scan, and selected chat/group management.
+- Unified Inbox has a WhatsApp composer that sends text to selected chats/groups with optimistic pending/sent/failed UI.
+- Unified Inbox has an ActivityItem detail panel with WhatsApp reply prefill from item metadata.
+- ActivityItems can be marked seen/done/snoozed from the detail panel and persist via `PATCH /api/activity-items` when DB is configured.
+- Notes page now has basic CRUD/autosave against `/api/notes` with mock fallback when DB is not configured.
+- Daily Brief has an AI provider abstraction for OpenAI/Anthropic/Ollama plus `/api/daily-brief` with cached DB summaries and heuristic fallback.
+- GitHub integration has a token-based PR list skeleton and can sync open PRs into normalized ActivityItems.
+- Jira integration has a basic active sprint/assigned issues skeleton and can sync issues into normalized ActivityItems.
+- Slack integration has a bot-token selected-channel skeleton and can sync recent selected-channel messages/mentions into normalized ActivityItems.
+- WhatsApp connector downloads incoming image/video/document/audio messages from selected chats and uploads them to Cloudinary when configured, attaching media metadata to ActivityItems.
+- WhatsApp composer/API/connector can send image/video/document/audio messages by media URL, with optimistic UI status.
+- WhatsApp connector can create/restore an encrypted Baileys session backup using `ENCRYPTION_KEY` and `WHATSAPP_SESSION_BACKUP_FILE`.
 
 ## Immediate priority
 
@@ -62,7 +74,8 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Add Integrations page.
 - [x] Add Settings page.
 - [x] Add mock ActivityItems.
-- [ ] Add feed, filters, detail panel, composer shell. (Feed and source filters exist; detail panel/composer still pending.)
+- [x] Add feed, filters, detail panel, composer shell.
+- [x] Add ActivityItem status actions.
 
 ## Near-term backlog
 
@@ -70,33 +83,35 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 
 - [ ] Add Slack OAuth flow.
 - [ ] Store Slack tokens encrypted.
-- [ ] Fetch workspace/user info.
-- [ ] List Slack channels.
-- [ ] Allow selected channels only.
-- [ ] Sync selected channel messages.
+- [x] Fetch workspace/user info.
+- [x] List Slack channels.
+- [x] Allow selected channels only.
+- [x] Sync selected channel messages.
 - [ ] Sync DMs.
-- [ ] Track mentions.
+- [x] Track mentions.
 - [ ] Track threads involving user.
 - [ ] Send channel messages.
 - [ ] Send DMs.
 - [ ] Reply in threads.
-- [ ] Convert events to ActivityItems.
+- [x] Convert events to ActivityItems.
 
 ### WhatsApp integration
 
-- [ ] Create `apps/whatsapp-connector`.
+- [x] Create `apps/whatsapp-connector`.
 - [x] Choose/verify Baileys or equivalent.
 - [x] Generate QR login.
-- [ ] Persist session securely.
+- [x] Persist session securely.
 - [ ] Deploy connector to Railway.
 - [ ] Confirm session survives restart.
 - [x] List chats/groups.
 - [x] Select visible chats/groups.
+- [x] Add web UI for QR login and selected chats/groups.
 - [x] Receive text messages.
 - [x] Send text messages.
-- [ ] Receive/download images/videos/files.
-- [ ] Upload media to Cloudinary.
-- [ ] Send images/videos/files.
+- [x] Add web composer for WhatsApp text sends.
+- [x] Receive/download images/videos/files.
+- [x] Upload media to Cloudinary.
+- [x] Send images/videos/files.
 - [ ] Implement quote reply if supported.
 - [ ] Implement group mentions if reliable.
 - [ ] Search synced WhatsApp messages.
@@ -105,48 +120,48 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 
 - [ ] Add GitHub auth.
 - [ ] Fetch authenticated user.
-- [ ] Fetch PRs created by user.
+- [x] Fetch PRs created by user.
 - [ ] Fetch PRs needing review.
 - [ ] Fetch comments mentioning user.
 - [ ] Fetch merged PRs.
 - [ ] Fetch failed checks.
 - [ ] Add webhook handling.
-- [ ] Store PR events as ActivityItems.
+- [x] Store PR events as ActivityItems.
 
 ### Jira integration
 
 - [ ] Add Jira auth.
 - [ ] Select site/project/board.
-- [ ] Fetch active sprint.
-- [ ] Fetch sprint issues.
+- [x] Fetch active sprint.
+- [x] Fetch sprint issues.
 - [ ] Track ticket status changes.
-- [ ] Track assigned tickets.
+- [x] Track assigned tickets.
 - [ ] Parse ticket keys from GitHub PRs.
 - [ ] Link PRs to Jira tickets.
 - [ ] Build sprint progress widget.
-- [ ] Store Jira events as ActivityItems.
+- [x] Store Jira events as ActivityItems.
 
 ### Notes
 
 - [ ] Add TipTap editor.
-- [ ] Implement pages.
+- [x] Implement pages.
 - [ ] Add slash command menu.
 - [ ] Add headings/lists/checklists.
 - [ ] Add basic tables.
-- [ ] Add autosave.
+- [x] Add autosave.
 - [ ] Link notes to ActivityItems.
 - [ ] Add create-note-from-item action.
 
 ### AI
 
-- [ ] Create AI provider abstraction.
-- [ ] Add OpenAI provider.
-- [ ] Add Anthropic provider.
-- [ ] Add Ollama provider via base URL.
+- [x] Create AI provider abstraction.
+- [x] Add OpenAI provider.
+- [x] Add Anthropic provider.
+- [x] Add Ollama provider via base URL.
 - [ ] Add model selection.
 - [ ] Add async summary jobs.
-- [ ] Cache summaries.
-- [ ] Generate Daily Brief.
+- [x] Cache summaries.
+- [x] Generate Daily Brief.
 - [ ] Generate Slack thread summaries.
 - [ ] Generate WhatsApp chat summaries.
 - [ ] Generate PR summaries.
@@ -155,7 +170,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 
 ### Performance/polish
 
-- [ ] Add optimistic sending.
+- [x] Add optimistic sending for WhatsApp text composer.
 - [ ] Add skeleton loading.
 - [ ] Add virtualized lists.
 - [ ] Add DB indexes.

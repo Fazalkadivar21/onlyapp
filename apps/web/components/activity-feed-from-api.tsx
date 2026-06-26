@@ -17,9 +17,10 @@ type Filter = {
   actionOnly?: boolean;
 };
 
-export function ActivityFeedFromApi({ filter = {} }: { filter?: Filter }) {
+export function ActivityFeedFromApi({ filter = {}, selectedId, itemOverrides = {}, onSelect }: { filter?: Filter; selectedId?: string; itemOverrides?: Record<string, Partial<ActivityItem>>; onSelect?: (item: ActivityItem) => void }) {
   const { items, source, error, loading } = useActivityItems();
-  const filteredItems = useMemo(() => filterItems(items, filter), [items, filter]);
+  const mergedItems = useMemo(() => items.map((item) => ({ ...item, ...itemOverrides[item.id] })), [items, itemOverrides]);
+  const filteredItems = useMemo(() => filterItems(mergedItems, filter), [mergedItems, filter]);
 
   if (loading) {
     return <div className="rounded-3xl bg-white p-6 text-sm text-zinc-500 shadow-sm">Loading activity…</div>;
@@ -28,7 +29,7 @@ export function ActivityFeedFromApi({ filter = {} }: { filter?: Filter }) {
   return (
     <div>
       <div className="mb-3 text-xs text-zinc-500">Activity source: {source}{error ? ` (${error})` : ""}</div>
-      <ActivityFeed items={filteredItems} />
+      <ActivityFeed items={filteredItems} selectedId={selectedId} onSelect={onSelect} />
     </div>
   );
 }

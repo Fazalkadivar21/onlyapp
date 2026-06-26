@@ -1,8 +1,19 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { getWhatsAppState, listSelectedWhatsAppChats, listWhatsAppChats, sendWhatsAppText, setSelectedWhatsAppChats, startWhatsApp } from "./whatsapp.js";
+import { getWhatsAppState, listSelectedWhatsAppChats, listWhatsAppChats, sendWhatsAppMedia, sendWhatsAppText, setSelectedWhatsAppChats, startWhatsApp } from "./whatsapp.js";
 
 const app = new Hono();
+
+app.use("*", async (c, next) => {
+  const token = process.env.WHATSAPP_CONNECTOR_TOKEN;
+  if (!token || c.req.path === "/health") return next();
+
+  if (c.req.header("authorization") !== `Bearer ${token}`) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  return next();
+});
 
 app.get("/health", (c) => c.json({ ok: true, service: "whatsapp-connector", whatsapp: getWhatsAppState() }));
 
@@ -33,12 +44,12 @@ app.post("/selected-chats", async (c) => {
 app.post("/send", async (c) => {
   const body = await c.req.json().catch(() => null);
 
-  if (!isSendTextBody(body)) {
-    return c.json({ error: "Expected JSON body: { to: string, text: string }" }, 400);
+  if (!isSendTextBody(body) && !isSendMediaBody(body)) {
+    return c.json({ error: "Expected JSON body: { to: string, text: string } or { to: string, mediaUrl: string, mediaType: image|video|document|audio }" }, 400);
   }
 
   try {
-    const result = await sendWhatsAppText(body);
+    const result = isSendMediaBody(body) ? await sendWhatsAppMedia(body) : await sendWhatsAppText(body);
     return c.json({ status: "sent", result });
   } catch (error) {
     return c.json({ error: error instanceof Error ? error.message : "send_failed" }, 400);
@@ -61,4 +72,17 @@ function isSendTextBody(value: unknown): value is { to: string; text: string } {
 
 function isSelectedChatsBody(value: unknown): value is { chatIds: string[] } {
   return typeof value === "object" && value !== null && "chatIds" in value && Array.isArray(value.chatIds) && value.chatIds.every((chatId) => typeof chatId === "string");
+}
+
+function isSendMediaBody(value: unknown): value is { to: string; mediaUrl: string; mediaType: "image" | "video" | "document" | "audio"; caption?: string; fileName?: string; mimeType?: string } {
+  if (typeof value !== "object" || value === null) return false;
+  const body = value as Record<string, unknown>;
+  return (
+    typeof body.to === "string" &&
+    typeof body.mediaUrl === "string" &&
+    ["image", "video", "document", "audio"].includes(String(body.mediaType)) &&
+    (body.caption === undefined || typeof body.caption === "string") &&
+    (body.fileName === undefined || typeof body.fileName === "string") &&
+    (body.mimeType === undefined || typeof body.mimeType === "string")
+  );
 }

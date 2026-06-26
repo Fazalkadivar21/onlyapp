@@ -19,6 +19,9 @@
       ],
       "@mark-1/db": [
         "../../packages/db/src/index.ts"
+      ],
+      "@mark-1/integrations": [
+        "../../packages/integrations/src/index.ts"
       ]
     },
     "allowJs": true,

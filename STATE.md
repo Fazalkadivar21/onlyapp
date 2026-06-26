@@ -27,6 +27,21 @@ Implemented:
 - Incoming WhatsApp text/caption messages are normalized and forwarded to web `POST /api/activity-items` when `APP_URL` is set.
 - WhatsApp connector only forwards selected chats/groups, configured by `WHATSAPP_SELECTED_CHATS` or `POST /selected-chats`.
 - Web activity item POST supports optional bearer auth via `WHATSAPP_CONNECTOR_TOKEN` and dedupes by source/sourceId.
+- Web Integrations page includes a WhatsApp control panel backed by `/api/integrations/whatsapp` for connector status, QR rendering, chat listing, and selected chat/group saving.
+- WhatsApp connector endpoints are bearer-token protected when `WHATSAPP_CONNECTOR_TOKEN` is set, with `/health` left public for health checks.
+- Unified Inbox includes a WhatsApp composer that loads selected chats, sends through `/api/messages/whatsapp`, and shows optimistic pending/sent/failed states.
+- WhatsApp send API persists outgoing message status to `messages` when `DATABASE_URL` is configured and still works as connector-only send without DB.
+- Unified Inbox has an ActivityItem detail panel. Selecting an item shows source/status/body metadata; WhatsApp items expose a reply action that prefills the composer with the source chat ID.
+- ActivityItem detail panel supports seen/done/snoozed status actions. Updates are optimistic in the UI and persist through `PATCH /api/activity-items` when `DATABASE_URL` is configured.
+- Notes page now has a lightweight notes workspace with list/create/select/edit and debounced autosave via `/api/notes`. It uses a mock local note fallback without `DATABASE_URL`.
+- AI provider abstraction exists in `packages/integrations` for OpenAI, Anthropic, and Ollama-compatible `/api/chat` endpoints.
+- Daily Brief page uses `/api/daily-brief`; it reads cached ActivityItems, generates/caches DB summaries in `ai_summaries`, and falls back to a heuristic brief when no AI provider is configured or AI fails.
+- GitHub integration skeleton exists: `packages/integrations/src/github.ts` fetches open PRs using `GITHUB_TOKEN` and optional `GITHUB_REPOSITORIES`; `/api/integrations/github/prs` lists PRs and can sync them into normalized ActivityItems; Integrations page has a GitHub PR panel.
+- Jira integration skeleton exists: `packages/integrations/src/jira.ts` fetches active sprint issues with `JIRA_BOARD_ID` or assigned project issues with `JIRA_PROJECT_KEY`; `/api/integrations/jira/issues` lists issues and can sync them into normalized ActivityItems; Integrations page has a Jira panel.
+- Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels via `SLACK_BOT_TOKEN`, reads `SLACK_SELECTED_CHANNELS`, fetches recent selected-channel messages, detects mentions of the authenticated bot/user, and normalizes messages into ActivityItems; Integrations page has a Slack panel.
+- WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
+- WhatsApp media sending exists: web `/api/messages/whatsapp`, the inbox composer, and connector `/send` accept media URLs for image/video/document/audio sends with optional caption/file name.
+- WhatsApp session persistence now has an encrypted backup path: connector restores `WHATSAPP_SESSION_BACKUP_FILE` into `WHATSAPP_SESSION_DIR` before Baileys starts, and backs up session files after credential updates when `ENCRYPTION_KEY` is configured.
 - `.env.example` with required environment variable names only.
 - `RAILWAY.md` deployment notes for web, worker, and WhatsApp connector services.
 
@@ -63,6 +78,19 @@ packages/integrations
 - Re-ran typecheck/build/lint after Cloudinary wrapper + inbox filters — passed.
 - Re-ran typecheck/build/lint after WhatsApp incoming ActivityItem forwarding — passed.
 - Re-ran typecheck/build/lint after WhatsApp selected-chat filtering — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after WhatsApp web integration panel — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after WhatsApp web composer/send API — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after ActivityItem detail panel + WhatsApp reply prefill — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after ActivityItem status actions — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Notes CRUD/autosave — passed.
+- First `pnpm typecheck` after Daily Brief AI failed because web did not depend on `@mark-1/integrations`; added dependency/path alias.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Daily Brief AI endpoint/UI — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after GitHub PR skeleton — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Jira issues skeleton — passed.
+- Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after Slack selected-channel skeleton — passed.
+- Re-ran `pnpm install`, `pnpm typecheck`, `pnpm lint`, and `pnpm build` after WhatsApp incoming media download/upload support — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after WhatsApp media URL send support — passed. First parallel lint/build run had a transient `.next/types` race; rerunning lint after build passed.
+- Re-ran `pnpm --filter @mark-1/whatsapp-connector typecheck`, `pnpm typecheck`, `pnpm build`, and `pnpm lint` after encrypted WhatsApp session backup support — passed.
 
 Notes:
 
@@ -86,9 +114,9 @@ Notes:
 
 ## Next agent should do
 
-1. Verify WhatsApp session survives connector restart and decide hosted session persistence/encryption strategy.
-2. Add Cloudinary upload handling to WhatsApp media receive/send path.
-3. Build a small web UI for selecting WhatsApp chats/groups via connector APIs.
+1. Validate WhatsApp session survives connector restart locally and then on Railway with `WHATSAPP_SESSION_BACKUP_FILE` on durable storage.
+2. Add safer media upload UX for WhatsApp sends instead of requiring pasted media URLs.
+3. Extend Slack beyond selected-channel skeleton: DMs, thread replies, send API, and proper OAuth/token storage.
 4. Add DB migrations generation once `DATABASE_URL` target is confirmed.
 
 ## Known blockers / missing information
@@ -96,7 +124,7 @@ Notes:
 - Exact DB provider not confirmed, but Neon is recommended.
 - Redis provider not confirmed, likely Upstash or Railway Redis.
 - Auth method not confirmed; assume simple single-user auth initially.
-- Slack app credentials are not available yet.
+- Slack app credentials are not available yet; current Slack skeleton can use a manually provided `SLACK_BOT_TOKEN` and `SLACK_SELECTED_CHANNELS`.
 - GitHub app/OAuth credentials are not available yet.
 - Jira instance/auth details are not available yet.
 - Cloudinary credentials are not available yet.
