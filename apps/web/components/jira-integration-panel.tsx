@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ErrorNotice, LoadingCards } from "./ui-state";
 
 type JiraIssue = {
   id: string;
@@ -45,6 +46,9 @@ export function JiraIntegrationPanel() {
       setSprint(payload.sprint);
       setIssues(payload.issues ?? []);
       setError(payload.error);
+    } catch (error) {
+      setIssues([]);
+      setError(error instanceof Error ? error.message : "request_failed");
     } finally {
       setLoading(false);
     }
@@ -84,11 +88,11 @@ export function JiraIntegrationPanel() {
         </div>
       </div>
 
-      {error ? <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
+      {error ? <div className="mt-4"><ErrorNotice title="Jira unavailable" message={error} action={<button onClick={loadIssues} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /></div> : null}
       {syncResult ? <p className="mt-4 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">{syncResult}</p> : null}
 
       <div className="mt-5 grid gap-3">
-        {loading ? <div className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-500">Loading Jira issues…</div> : null}
+        {loading ? <LoadingCards count={3} /> : null}
         {!loading && issues.length === 0 ? <div className="rounded-2xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">No Jira issues loaded.</div> : null}
         {issues.slice(0, 8).map((issue) => (
           <a key={issue.id} href={issue.url} target="_blank" rel="noreferrer" className="rounded-2xl border border-zinc-100 p-4 transition hover:border-zinc-300">

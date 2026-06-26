@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ErrorNotice, LoadingCards } from "./ui-state";
 
 type WhatsAppState = {
   status: string;
@@ -36,14 +37,18 @@ export function WhatsAppIntegrationPanel() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [requestError, setRequestError] = useState<string>();
 
   async function refresh() {
     setLoading(true);
     try {
+      setRequestError(undefined);
       const response = await fetch("/api/integrations/whatsapp", { cache: "no-store" });
       const next = (await response.json()) as WhatsAppPayload;
       setPayload(next);
       setSelected(new Set((next.chats ?? []).filter((chat) => chat.selected).map((chat) => chat.id)));
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "request_failed");
     } finally {
       setLoading(false);
     }
@@ -98,7 +103,7 @@ export function WhatsAppIntegrationPanel() {
         </div>
       </div>
 
-      {payload.error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{payload.error}</p> : null}
+      {requestError || payload.error ? <div className="mt-4"><ErrorNotice title="WhatsApp connector unavailable" message={requestError ?? payload.error} action={<button onClick={refresh} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /></div> : null}
 
       {payload.state ? (
         <div className="mt-4 grid gap-3 rounded-2xl bg-zinc-50 p-4 text-xs text-zinc-600 md:grid-cols-2">
@@ -123,7 +128,9 @@ export function WhatsAppIntegrationPanel() {
       </div>
 
       <div className="mt-3 max-h-96 overflow-auto rounded-2xl border border-zinc-200">
-        {sortedChats.length === 0 ? (
+        {loading ? (
+          <div className="p-3"><LoadingCards count={4} /></div>
+        ) : sortedChats.length === 0 ? (
           <p className="p-4 text-sm text-zinc-500">No chats loaded yet. Connect WhatsApp, then refresh.</p>
         ) : (
           sortedChats.map((chat) => (

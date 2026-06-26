@@ -174,12 +174,12 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 ### Performance/polish
 
 - [x] Add optimistic sending for WhatsApp text composer.
-- [ ] Add skeleton loading.
+- [x] Add skeleton loading.
 - [ ] Add virtualized lists.
 - [ ] Add DB indexes.
 - [x] Add command palette.
 - [x] Add keyboard shortcuts.
-- [ ] Add retry states.
+- [x] Add retry states.
 - [ ] Add sync health UI.
 - [ ] Add error boundaries.
 

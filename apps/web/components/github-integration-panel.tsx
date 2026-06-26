@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ErrorNotice, LoadingCards } from "./ui-state";
 
 type GitHubPullRequest = {
   id: number;
@@ -37,6 +38,9 @@ export function GitHubIntegrationPanel() {
       setConfigured(Boolean(payload.configured));
       setPullRequests(payload.pullRequests ?? []);
       setError(payload.error);
+    } catch (error) {
+      setPullRequests([]);
+      setError(error instanceof Error ? error.message : "request_failed");
     } finally {
       setLoading(false);
     }
@@ -75,11 +79,11 @@ export function GitHubIntegrationPanel() {
         </div>
       </div>
 
-      {error ? <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
+      {error ? <div className="mt-4"><ErrorNotice title="GitHub unavailable" message={error} action={<button onClick={loadPullRequests} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /></div> : null}
       {syncResult ? <p className="mt-4 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">{syncResult}</p> : null}
 
       <div className="mt-5 grid gap-3">
-        {loading ? <div className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-500">Loading PRs…</div> : null}
+        {loading ? <LoadingCards count={3} /> : null}
         {!loading && pullRequests.length === 0 ? <div className="rounded-2xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">No PRs loaded.</div> : null}
         {pullRequests.slice(0, 8).map((pr) => (
           <a key={pr.id} href={pr.htmlUrl} target="_blank" rel="noreferrer" className="rounded-2xl border border-zinc-100 p-4 transition hover:border-zinc-300">

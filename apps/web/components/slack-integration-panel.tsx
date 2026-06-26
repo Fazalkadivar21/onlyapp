@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ErrorNotice, LoadingCards } from "./ui-state";
 
 type SlackChannel = {
   id: string;
@@ -42,6 +43,10 @@ export function SlackIntegrationPanel() {
       setSelectedChannels(payload.selectedChannels ?? []);
       setSendChannelId((current) => current || nextChannels.find((channel) => channel.selected)?.id || nextChannels[0]?.id || "");
       setError(payload.error);
+    } catch (error) {
+      setChannels([]);
+      setSelectedChannels([]);
+      setError(error instanceof Error ? error.message : "request_failed");
     } finally {
       setLoading(false);
     }
@@ -104,7 +109,7 @@ export function SlackIntegrationPanel() {
         </div>
       </div>
 
-      {error ? <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
+      {error ? <div className="mt-4"><ErrorNotice title="Slack unavailable" message={error} action={<button onClick={loadChannels} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /></div> : null}
       {syncResult ? <p className="mt-4 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">{syncResult}</p> : null}
       {selectedChannels.length > 0 ? <p className="mt-4 text-xs text-zinc-500">Selected from env: {selectedChannels.join(", ")}</p> : null}
 
@@ -129,7 +134,7 @@ export function SlackIntegrationPanel() {
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
-        {loading ? <div className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-500">Loading Slack channels…</div> : null}
+        {loading ? <LoadingCards count={4} className="md:col-span-2" /> : null}
         {!loading && channels.length === 0 ? <div className="rounded-2xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">No channels loaded.</div> : null}
         {(selected.length > 0 ? selected : channels.slice(0, 8)).map((channel) => (
           <div key={channel.id} className="rounded-2xl border border-zinc-100 p-4">

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ActivityItem, ActivityPriority, ActivitySource, ActivityStatus } from "@mark-1/shared";
 import { ActivityFeed } from "./activity-feed";
+import { ErrorNotice, LoadingCards } from "./ui-state";
 
 type ActivityItemsResponse = {
   items: Array<Omit<ActivityItem, "createdAt" | "updatedAt"> & { createdAt: string; updatedAt: string }>;
@@ -18,17 +19,22 @@ type Filter = {
 };
 
 export function ActivityFeedFromApi({ filter = {}, selectedId, itemOverrides = {}, onSelect }: { filter?: Filter; selectedId?: string; itemOverrides?: Record<string, Partial<ActivityItem>>; onSelect?: (item: ActivityItem) => void }) {
-  const { items, source, error, loading } = useActivityItems();
+  const { items, source, error, loading, retry } = useActivityItems();
   const mergedItems = useMemo(() => items.map((item) => ({ ...item, ...itemOverrides[item.id] })), [items, itemOverrides]);
   const filteredItems = useMemo(() => filterItems(mergedItems, filter), [mergedItems, filter]);
 
   if (loading) {
-    return <div className="rounded-3xl bg-white p-6 text-sm text-zinc-500 shadow-sm">Loading activity…</div>;
+    return <LoadingCards count={5} />;
   }
 
   return (
     <div>
-      <div className="mb-3 text-xs text-zinc-500">Activity source: {source}{error ? ` (${error})` : ""}</div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
+        <span>Activity source: {source}{error ? ` (${error})` : ""}</span>
+        {error ? <button type="button" onClick={retry} className="rounded-full border border-zinc-200 px-3 py-1 text-zinc-700 hover:bg-zinc-50">Retry</button> : null}
+      </div>
+      {error && items.length === 0 ? <ErrorNotice title="Activity failed to load" message="Showing no cached items. Retry when the backend is available." action={<button type="button" onClick={retry} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /> : null}
+      {error && items.length === 0 ? <div className="mt-4" /> : null}
       <ActivityFeed items={filteredItems} selectedId={selectedId} onSelect={onSelect} />
     </div>
   );
@@ -53,9 +59,12 @@ function useActivityItems() {
   const [source, setSource] = useState<ActivityItemsResponse["source"]>("mock");
   const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(undefined);
 
     fetch("/api/activity-items")
       .then((response) => response.json() as Promise<ActivityItemsResponse>)
@@ -66,7 +75,11 @@ function useActivityItems() {
         setError(data.error);
       })
       .catch(() => {
-        if (!cancelled) setError("request_failed");
+        if (!cancelled) {
+          setItems([]);
+          setSource("mock");
+          setError("request_failed");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -75,9 +88,9 @@ function useActivityItems() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [retryNonce]);
 
-  return { items, source, error, loading };
+  return { items, source, error, loading, retry: () => setRetryNonce((value) => value + 1) };
 }
 
 function filterItems(items: ActivityItem[], filter: Filter) {
