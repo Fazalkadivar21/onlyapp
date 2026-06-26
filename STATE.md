@@ -41,6 +41,7 @@ Implemented:
 - Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels via `SLACK_BOT_TOKEN`, reads `SLACK_SELECTED_CHANNELS`, fetches recent selected-channel messages, detects mentions of the authenticated bot/user, normalizes messages into ActivityItems, and can send channel messages; Integrations page has a Slack panel with a simple channel composer.
 - Workspace shell includes a client command palette opened with ⌘K/Ctrl+K for quick page navigation.
 - Activity feeds and integration panels now show skeleton loading cards plus retryable error notices for failed fetches.
+- Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
 - WhatsApp media sending exists: web `/api/messages/whatsapp`, the inbox composer, and connector `/send` accept media URLs for image/video/document/audio sends with optional caption/file name.
 - WhatsApp composer now supports local file upload: `/api/media/upload` accepts multipart files up to 25MB, uploads them to Cloudinary, infers media type, and fills the media send fields.
@@ -100,6 +101,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Slack channel send API/composer — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after command palette — passed.
 - Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after skeleton/retry states — passed.
+- Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after Sync Health panel/API — passed.
 
 Notes:
 
@@ -125,8 +127,8 @@ Notes:
 
 1. Validate WhatsApp session survives connector restart locally and then on Railway with `WHATSAPP_SESSION_BACKUP_FILE` on durable storage.
 2. Extend Slack beyond selected-channel skeleton: DMs, thread replies, and proper OAuth/token storage.
-3. Add sync health UI for recent sync/send failures across integrations.
-4. Add DB migrations generation once `DATABASE_URL` target is confirmed.
+3. Add DB migrations generation once `DATABASE_URL` target is confirmed.
+4. Add virtualized lists or pagination once feeds/chats are large enough to need it.
 
 ## Known blockers / missing information
 

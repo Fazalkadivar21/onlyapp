@@ -3,6 +3,7 @@ import { GitHubIntegrationPanel } from "@/components/github-integration-panel";
 import { JiraIntegrationPanel } from "@/components/jira-integration-panel";
 import { PageHeader } from "@/components/page-header";
 import { SlackIntegrationPanel } from "@/components/slack-integration-panel";
+import { SyncHealthPanel } from "@/components/sync-health-panel";
 import { WhatsAppIntegrationPanel } from "@/components/whatsapp-integration-panel";
 
 const integrations: IntegrationSummary[] = [
@@ -14,6 +15,7 @@ export default function IntegrationsPage() {
     <div>
       <PageHeader title="Integrations" description="Connection surfaces are stubbed now; OAuth and connector flows will be wired behind these cards." />
       <div className="grid gap-4 md:grid-cols-2">
+        <SyncHealthPanel />
         <WhatsAppIntegrationPanel />
         <SlackIntegrationPanel />
         <GitHubIntegrationPanel />

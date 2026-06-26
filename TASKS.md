@@ -40,6 +40,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - WhatsApp connector can create/restore an encrypted Baileys session backup using `ENCRYPTION_KEY` and `WHATSAPP_SESSION_BACKUP_FILE`.
 - Slack can send channel messages through `SLACK_BOT_TOKEN`, with a simple Integrations-page composer and DB outgoing message status when configured.
 - Workspace shell has a basic command palette via ⌘K/Ctrl+K for page navigation.
+- Integrations page has a Sync Health panel backed by `/api/sync-health` for env/config checks, WhatsApp connector health, failed sends, and recent sync jobs.
 
 ## Immediate priority
 
@@ -180,7 +181,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Add command palette.
 - [x] Add keyboard shortcuts.
 - [x] Add retry states.
-- [ ] Add sync health UI.
+- [x] Add sync health UI.
 - [ ] Add error boundaries.
 
 ## High-risk validation tasks
