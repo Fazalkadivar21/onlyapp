@@ -38,6 +38,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - WhatsApp composer/API/connector can send image/video/document/audio messages by media URL, with optimistic UI status.
 - WhatsApp composer can upload local files to Cloudinary through `/api/media/upload` before sending media.
 - WhatsApp connector can create/restore an encrypted Baileys session backup using `ENCRYPTION_KEY` and `WHATSAPP_SESSION_BACKUP_FILE`.
+- Slack can send channel messages through `SLACK_BOT_TOKEN`, with a simple Integrations-page composer and DB outgoing message status when configured.
 
 ## Immediate priority
 
@@ -91,7 +92,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Sync DMs.
 - [x] Track mentions.
 - [ ] Track threads involving user.
-- [ ] Send channel messages.
+- [x] Send channel messages.
 - [ ] Send DMs.
 - [ ] Reply in threads.
 - [x] Convert events to ActivityItems.

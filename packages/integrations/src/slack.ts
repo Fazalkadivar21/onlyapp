@@ -8,6 +8,12 @@ export type SlackChannel = {
   selected: boolean;
 };
 
+export type SlackSendResult = {
+  channelId: string;
+  ts: string;
+  permalink?: string;
+};
+
 export type SlackMessage = {
   id: string;
   channelId: string;
@@ -132,6 +138,23 @@ export async function fetchSlackSelectedChannelMessages(input: { token?: string;
   return messages.sort((a, b) => Number(b.ts) - Number(a.ts));
 }
 
+export async function sendSlackMessage(input: { token?: string; channelId: string; text: string; threadTs?: string }): Promise<SlackSendResult> {
+  const token = input.token ?? process.env.SLACK_BOT_TOKEN;
+  if (!token) throw new Error("SLACK_BOT_TOKEN is required");
+  if (!input.channelId || !input.text.trim()) throw new Error("channelId and text are required");
+
+  const payload = await slackFetch<{ ok: boolean; channel: string; ts: string }>("/chat.postMessage", token, {
+    method: "POST",
+    body: JSON.stringify({ channel: input.channelId, text: input.text, thread_ts: input.threadTs })
+  });
+
+  return {
+    channelId: payload.channel,
+    ts: payload.ts,
+    permalink: `https://slack.com/app_redirect?channel=${payload.channel}&message_ts=${payload.ts}`
+  };
+}
+
 export function normalizeSlackMessage(message: SlackMessage): Omit<ActivityItem, "id" | "createdAt" | "updatedAt"> {
   const priority: ActivityPriority = message.mentionedCurrentUser ? "high" : "normal";
   return {
@@ -170,11 +193,13 @@ async function resolveSlackUserName(token: string, userId: string, cache: Map<st
   }
 }
 
-async function slackFetch<T>(path: string, token: string): Promise<T> {
+async function slackFetch<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`https://slack.com/api${path}`, {
+    ...init,
     headers: {
       authorization: `Bearer ${token}`,
-      "content-type": "application/json; charset=utf-8"
+      "content-type": "application/json; charset=utf-8",
+      ...init.headers
     }
   });
 

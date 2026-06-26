@@ -38,7 +38,7 @@ Implemented:
 - Daily Brief page uses `/api/daily-brief`; it reads cached ActivityItems, generates/caches DB summaries in `ai_summaries`, and falls back to a heuristic brief when no AI provider is configured or AI fails.
 - GitHub integration skeleton exists: `packages/integrations/src/github.ts` fetches open PRs using `GITHUB_TOKEN` and optional `GITHUB_REPOSITORIES`; `/api/integrations/github/prs` lists PRs and can sync them into normalized ActivityItems; Integrations page has a GitHub PR panel.
 - Jira integration skeleton exists: `packages/integrations/src/jira.ts` fetches active sprint issues with `JIRA_BOARD_ID` or assigned project issues with `JIRA_PROJECT_KEY`; `/api/integrations/jira/issues` lists issues and can sync them into normalized ActivityItems; Integrations page has a Jira panel.
-- Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels via `SLACK_BOT_TOKEN`, reads `SLACK_SELECTED_CHANNELS`, fetches recent selected-channel messages, detects mentions of the authenticated bot/user, and normalizes messages into ActivityItems; Integrations page has a Slack panel.
+- Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels via `SLACK_BOT_TOKEN`, reads `SLACK_SELECTED_CHANNELS`, fetches recent selected-channel messages, detects mentions of the authenticated bot/user, normalizes messages into ActivityItems, and can send channel messages; Integrations page has a Slack panel with a simple channel composer.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
 - WhatsApp media sending exists: web `/api/messages/whatsapp`, the inbox composer, and connector `/send` accept media URLs for image/video/document/audio sends with optional caption/file name.
 - WhatsApp composer now supports local file upload: `/api/media/upload` accepts multipart files up to 25MB, uploads them to Cloudinary, infers media type, and fills the media send fields.
@@ -95,6 +95,7 @@ packages/integrations
 - Re-ran `pnpm --filter @mark-1/whatsapp-connector typecheck`, `pnpm typecheck`, `pnpm build`, and `pnpm lint` after encrypted WhatsApp session backup support — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding WhatsApp session backup status UI — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding web media upload for WhatsApp sends — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Slack channel send API/composer — passed.
 
 Notes:
 
@@ -119,7 +120,7 @@ Notes:
 ## Next agent should do
 
 1. Validate WhatsApp session survives connector restart locally and then on Railway with `WHATSAPP_SESSION_BACKUP_FILE` on durable storage.
-2. Extend Slack beyond selected-channel skeleton: DMs, thread replies, send API, and proper OAuth/token storage.
+2. Extend Slack beyond selected-channel skeleton: DMs, thread replies, and proper OAuth/token storage.
 3. Add command palette / keyboard shortcuts for faster workspace navigation.
 4. Add DB migrations generation once `DATABASE_URL` target is confirmed.
 

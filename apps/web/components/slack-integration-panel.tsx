@@ -25,6 +25,10 @@ export function SlackIntegrationPanel() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string>();
+  const [sendChannelId, setSendChannelId] = useState("");
+  const [sendText, setSendText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<string>();
 
   async function loadChannels() {
     setLoading(true);
@@ -33,8 +37,10 @@ export function SlackIntegrationPanel() {
       const response = await fetch("/api/integrations/slack/channels", { cache: "no-store" });
       const payload = (await response.json()) as SlackChannelsResponse;
       setConfigured(Boolean(payload.configured));
-      setChannels(payload.channels ?? []);
+      const nextChannels = payload.channels ?? [];
+      setChannels(nextChannels);
       setSelectedChannels(payload.selectedChannels ?? []);
+      setSendChannelId((current) => current || nextChannels.find((channel) => channel.selected)?.id || nextChannels[0]?.id || "");
       setError(payload.error);
     } finally {
       setLoading(false);
@@ -53,6 +59,28 @@ export function SlackIntegrationPanel() {
       setSyncResult(error instanceof Error ? error.message : "sync_failed");
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function sendMessage() {
+    if (!sendChannelId || !sendText.trim()) return;
+
+    setSending(true);
+    setSendResult(undefined);
+    try {
+      const response = await fetch("/api/messages/slack", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ channelId: sendChannelId, text: sendText.trim() })
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "slack_send_failed");
+      setSendText("");
+      setSendResult("Sent");
+    } catch (error) {
+      setSendResult(error instanceof Error ? error.message : "slack_send_failed");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -79,6 +107,26 @@ export function SlackIntegrationPanel() {
       {error ? <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
       {syncResult ? <p className="mt-4 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">{syncResult}</p> : null}
       {selectedChannels.length > 0 ? <p className="mt-4 text-xs text-zinc-500">Selected from env: {selectedChannels.join(", ")}</p> : null}
+
+      <div className="mt-5 rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+        <div className="grid gap-3 md:grid-cols-[240px_1fr_auto]">
+          <select value={sendChannelId} onChange={(event) => setSendChannelId(event.target.value)} className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm">
+            {channels.length === 0 ? <option>No channels loaded</option> : null}
+            {(selected.length > 0 ? selected : channels).map((channel) => <option key={channel.id} value={channel.id}>#{channel.name}</option>)}
+          </select>
+          <input
+            value={sendText}
+            onChange={(event) => setSendText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) void sendMessage();
+            }}
+            placeholder="Send a Slack message…"
+            className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-400"
+          />
+          <button onClick={sendMessage} disabled={sending || !sendChannelId || !sendText.trim()} className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-40">{sending ? "Sending…" : "Send"}</button>
+        </div>
+        {sendResult ? <p className="mt-3 text-xs text-zinc-600">{sendResult}</p> : null}
+      </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {loading ? <div className="rounded-2xl bg-zinc-100 p-4 text-sm text-zinc-500">Loading Slack channels…</div> : null}
