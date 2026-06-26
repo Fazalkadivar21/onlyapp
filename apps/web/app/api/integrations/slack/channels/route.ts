@@ -1,5 +1,5 @@
 import { activityItems, createDb } from "@mark-1/db";
-import { fetchSlackChannels, fetchSlackSelectedChannelMessages, normalizeSlackMessage, parseSlackSelectedChannels } from "@mark-1/integrations";
+import { fetchSlackChannels, fetchSlackDms, fetchSlackSelectedChannelMessages, normalizeSlackMessage, parseSlackSelectedChannels, parseSlackSelectedDms } from "@mark-1/integrations";
 import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -7,11 +7,15 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const channels = await fetchSlackChannels();
+    const dmsResult: { dms: Awaited<ReturnType<typeof fetchSlackDms>>; dmError?: string } = await fetchSlackDms()
+      .then((dms) => ({ dms }))
+      .catch((error: unknown) => ({ dms: [], dmError: error instanceof Error ? error.message : "slack_dm_unavailable" }));
     const selectedChannels = parseSlackSelectedChannels();
-    return Response.json({ configured: true, selectedChannels, channels });
+    const selectedDms = parseSlackSelectedDms();
+    return Response.json({ configured: true, selectedChannels, selectedDms, channels, dms: dmsResult.dms, dmError: dmsResult.dmError });
   } catch (error) {
     const message = error instanceof Error ? error.message : "slack_unavailable";
-    return Response.json({ configured: Boolean(process.env.SLACK_BOT_TOKEN), selectedChannels: parseSlackSelectedChannels(), error: message, channels: [] }, { status: process.env.SLACK_BOT_TOKEN ? 502 : 200 });
+    return Response.json({ configured: Boolean(process.env.SLACK_BOT_TOKEN), selectedChannels: parseSlackSelectedChannels(), selectedDms: parseSlackSelectedDms(), error: message, channels: [], dms: [] }, { status: process.env.SLACK_BOT_TOKEN ? 502 : 200 });
   }
 }
 

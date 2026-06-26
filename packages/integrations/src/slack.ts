@@ -6,6 +6,7 @@ export type SlackChannel = {
   isPrivate: boolean;
   isMember: boolean;
   selected: boolean;
+  kind?: "channel" | "dm";
 };
 
 export type SlackSendResult = {
@@ -18,11 +19,13 @@ export type SlackMessage = {
   id: string;
   channelId: string;
   channelName: string;
+  isDm?: boolean;
   text: string;
   userId?: string;
   userName: string;
   ts: string;
   threadTs?: string;
+  isThreadReply?: boolean;
   permalink?: string;
   mentionedCurrentUser: boolean;
 };
@@ -39,6 +42,8 @@ type SlackConversation = {
   is_private?: boolean;
   is_member?: boolean;
   is_archived?: boolean;
+  is_im?: boolean;
+  user?: string;
 };
 
 type SlackHistoryMessage = {
@@ -49,6 +54,7 @@ type SlackHistoryMessage = {
   text?: string;
   ts?: string;
   thread_ts?: string;
+  reply_count?: number;
 };
 
 type SlackUser = {
@@ -59,9 +65,17 @@ type SlackUser = {
 };
 
 export function parseSlackSelectedChannels(value = process.env.SLACK_SELECTED_CHANNELS) {
+  return parseCsv(value);
+}
+
+export function parseSlackSelectedDms(value = process.env.SLACK_SELECTED_DMS) {
+  return parseCsv(value);
+}
+
+function parseCsv(value?: string) {
   return (value ?? "")
     .split(",")
-    .map((channel) => channel.trim())
+    .map((entry) => entry.trim())
     .filter(Boolean);
 }
 
@@ -88,7 +102,8 @@ export async function fetchSlackChannels(input: { token?: string; selectedChanne
         name: channel.name ?? channel.id,
         isPrivate: Boolean(channel.is_private),
         isMember: Boolean(channel.is_member),
-        selected: selected.has(channel.id) || selected.has(channel.name ?? "") || selected.has(`#${channel.name ?? ""}`)
+        selected: selected.has(channel.id) || selected.has(channel.name ?? "") || selected.has(`#${channel.name ?? ""}`),
+        kind: "channel" as const
       }))
     );
     cursor = payload.response_metadata?.next_cursor || undefined;
@@ -97,19 +112,55 @@ export async function fetchSlackChannels(input: { token?: string; selectedChanne
   return channels.slice(0, input.limit ?? 200);
 }
 
-export async function fetchSlackSelectedChannelMessages(input: { token?: string; selectedChannels?: string[]; limitPerChannel?: number } = {}) {
+export async function fetchSlackDms(input: { token?: string; selectedDms?: string[]; limit?: number } = {}) {
+  const token = input.token ?? process.env.SLACK_BOT_TOKEN;
+  if (!token) throw new Error("SLACK_BOT_TOKEN is required");
+
+  const selectedDms = new Set(input.selectedDms ?? parseSlackSelectedDms());
+  const userCache = new Map<string, string>();
+  const dms: SlackChannel[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const params = new URLSearchParams({ exclude_archived: "true", limit: String(Math.min(input.limit ?? 100, 200)), types: "im" });
+    if (cursor) params.set("cursor", cursor);
+
+    const payload = await slackFetch<SlackListResponse<{ channels: SlackConversation[] }>>(`/conversations.list?${params}`, token);
+    for (const dm of payload.channels) {
+      const name = dm.user ? await resolveSlackUserName(token, dm.user, userCache) : dm.id;
+      dms.push({
+        id: dm.id,
+        name,
+        isPrivate: true,
+        isMember: true,
+        selected: selectedDms.has(dm.id) || selectedDms.has(dm.user ?? "") || selectedDms.has(name),
+        kind: "dm" as const
+      });
+    }
+    cursor = payload.response_metadata?.next_cursor || undefined;
+  } while (cursor && dms.length < (input.limit ?? 100));
+
+  return dms.slice(0, input.limit ?? 100);
+}
+
+export async function fetchSlackSelectedChannelMessages(input: { token?: string; selectedChannels?: string[]; selectedDms?: string[]; limitPerChannel?: number } = {}) {
   const token = input.token ?? process.env.SLACK_BOT_TOKEN;
   if (!token) throw new Error("SLACK_BOT_TOKEN is required");
 
   const selectedChannels = input.selectedChannels ?? parseSlackSelectedChannels();
-  if (selectedChannels.length === 0) return [];
+  const selectedDms = input.selectedDms ?? parseSlackSelectedDms();
+  if (selectedChannels.length === 0 && selectedDms.length === 0) return [];
 
   const [auth, channels] = await Promise.all([
     slackFetch<{ ok: boolean; user_id?: string }>("/auth.test", token),
     fetchSlackChannels({ token, selectedChannels })
   ]);
   const mentionUserId = process.env.SLACK_USER_ID || auth.user_id;
-  const selected = channels.filter((channel) => channel.selected || selectedChannels.includes(channel.id));
+  const dms = selectedDms.length > 0 ? await fetchSlackDms({ token, selectedDms }) : [];
+  const selected = [
+    ...channels.filter((channel) => channel.selected || selectedChannels.includes(channel.id)),
+    ...dms.filter((dm) => dm.selected || selectedDms.includes(dm.id))
+  ];
   const userCache = new Map<string, string>();
   const messages: SlackMessage[] = [];
 
@@ -124,18 +175,53 @@ export async function fetchSlackSelectedChannelMessages(input: { token?: string;
         id: `${channel.id}_${message.ts}`,
         channelId: channel.id,
         channelName: channel.name,
+        isDm: channel.kind === "dm",
         text: message.text,
         userId: message.user,
         userName,
         ts: message.ts,
         threadTs: message.thread_ts,
+        isThreadReply: Boolean(message.thread_ts && message.thread_ts !== message.ts),
         permalink: `https://slack.com/app_redirect?channel=${channel.id}&message_ts=${message.ts}`,
-        mentionedCurrentUser: Boolean(mentionUserId && message.text.includes(`<@${mentionUserId}>`))
+        mentionedCurrentUser: Boolean(mentionUserId && message.text.includes(`<@${mentionUserId}>`)) || channel.kind === "dm"
       });
+
+      if (message.reply_count && message.reply_count > 0) {
+        const replies = await fetchSlackThreadReplies({ token, channelId: channel.id, channelName: channel.name, threadTs: message.ts, mentionUserId, userCache, isDm: channel.kind === "dm" });
+        messages.push(...replies);
+      }
     }
   }
 
   return messages.sort((a, b) => Number(b.ts) - Number(a.ts));
+}
+
+async function fetchSlackThreadReplies(input: { token: string; channelId: string; channelName: string; threadTs: string; mentionUserId?: string; userCache: Map<string, string>; isDm?: boolean }) {
+  const params = new URLSearchParams({ channel: input.channelId, ts: input.threadTs, limit: "20" });
+  const payload = await slackFetch<SlackListResponse<{ messages: SlackHistoryMessage[] }>>(`/conversations.replies?${params}`, input.token);
+  const replies = payload.messages.slice(1);
+  const result: SlackMessage[] = [];
+
+  for (const reply of replies) {
+    if (!reply.ts || !reply.text || reply.subtype === "bot_message") continue;
+    const userName = reply.user ? await resolveSlackUserName(input.token, reply.user, input.userCache) : (reply.username ?? "Slack");
+    result.push({
+      id: `${input.channelId}_${reply.ts}`,
+      channelId: input.channelId,
+      channelName: input.channelName,
+      isDm: input.isDm,
+      text: reply.text,
+      userId: reply.user,
+      userName,
+      ts: reply.ts,
+      threadTs: input.threadTs,
+      isThreadReply: true,
+      permalink: `https://slack.com/app_redirect?channel=${input.channelId}&message_ts=${reply.ts}`,
+      mentionedCurrentUser: Boolean(input.mentionUserId && reply.text.includes(`<@${input.mentionUserId}>`)) || Boolean(input.isDm)
+    });
+  }
+
+  return result;
 }
 
 export async function sendSlackMessage(input: { token?: string; channelId: string; text: string; threadTs?: string }): Promise<SlackSendResult> {
@@ -157,11 +243,12 @@ export async function sendSlackMessage(input: { token?: string; channelId: strin
 
 export function normalizeSlackMessage(message: SlackMessage): Omit<ActivityItem, "id" | "createdAt" | "updatedAt"> {
   const priority: ActivityPriority = message.mentionedCurrentUser ? "high" : "normal";
+  const location = message.isDm ? message.channelName : `#${message.channelName}`;
   return {
     source: "slack",
     sourceId: `slack_${message.id}`,
-    type: message.mentionedCurrentUser ? "mention" : "message",
-    title: `${message.mentionedCurrentUser ? "Mention" : "Message"} in #${message.channelName}`,
+    type: message.isThreadReply ? "thread_reply" : message.isDm ? "dm" : message.mentionedCurrentUser ? "mention" : "message",
+    title: `${message.isThreadReply ? "Thread reply" : message.isDm ? "DM" : message.mentionedCurrentUser ? "Mention" : "Message"} in ${location}`,
     body: message.text,
     actorName: message.userName,
     url: message.permalink,
@@ -173,6 +260,8 @@ export function normalizeSlackMessage(message: SlackMessage): Omit<ActivityItem,
       userId: message.userId,
       ts: message.ts,
       threadTs: message.threadTs,
+      isThreadReply: message.isThreadReply,
+      isDm: message.isDm,
       mentionedCurrentUser: message.mentionedCurrentUser
     }
   };

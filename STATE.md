@@ -38,7 +38,7 @@ Implemented:
 - Daily Brief page uses `/api/daily-brief`; it reads cached ActivityItems, generates/caches DB summaries in `ai_summaries`, and falls back to a heuristic brief when no AI provider is configured or AI fails.
 - GitHub integration skeleton exists: `packages/integrations/src/github.ts` fetches open PRs using `GITHUB_TOKEN` and optional `GITHUB_REPOSITORIES`; `/api/integrations/github/prs` lists PRs and can sync them into normalized ActivityItems; Integrations page has a GitHub PR panel.
 - Jira integration skeleton exists: `packages/integrations/src/jira.ts` fetches active sprint issues with `JIRA_BOARD_ID` or assigned project issues with `JIRA_PROJECT_KEY`; `/api/integrations/jira/issues` lists issues and can sync them into normalized ActivityItems; Integrations page has a Jira panel.
-- Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels via `SLACK_BOT_TOKEN`, reads `SLACK_SELECTED_CHANNELS`, fetches recent selected-channel messages, detects mentions of the authenticated bot/user, normalizes messages into ActivityItems, and can send channel messages; Integrations page has a Slack panel with a simple channel composer.
+- Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels and DMs via `SLACK_BOT_TOKEN`, reads `SLACK_SELECTED_CHANNELS` and `SLACK_SELECTED_DMS`, fetches recent selected-channel/DM messages plus thread replies, detects mentions of the authenticated bot/user, normalizes messages into ActivityItems, and can send channel/DM/thread messages; Integrations page has a Slack panel with a simple composer and optional thread timestamp.
 - Workspace shell includes a client command palette opened with ⌘K/Ctrl+K for quick page navigation.
 - Activity feeds and integration panels now show skeleton loading cards plus retryable error notices for failed fetches.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
@@ -48,7 +48,7 @@ Implemented:
 - WhatsApp composer now supports local file upload: `/api/media/upload` accepts multipart files up to 25MB, uploads them to Cloudinary, infers media type, and fills the media send fields.
 - WhatsApp session persistence now has an encrypted backup path: connector restores `WHATSAPP_SESSION_BACKUP_FILE` into `WHATSAPP_SESSION_DIR` before Baileys starts, and backs up session files after credential updates when `ENCRYPTION_KEY` is configured.
 - WhatsApp integration panel displays session directory, encrypted backup configuration, backup file path, last backup time, and backup errors from connector health state.
-- `.env.example` with required environment variable names only.
+- `.env.example` with required environment variable names only, including `SLACK_SELECTED_DMS` for selected Slack DMs.
 - `RAILWAY.md` deployment notes for web, worker, and WhatsApp connector services.
 
 ## Current directory
@@ -105,6 +105,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after Sync Health panel/API — passed.
 - Ran `pnpm db:generate` after adding DB indexes — passed and generated `packages/db/drizzle/0000_odd_king_bedlam.sql`.
 - Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after DB indexes/migration — passed.
+- Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after Slack DM/thread support — passed.
 
 Notes:
 
@@ -129,7 +130,7 @@ Notes:
 ## Next agent should do
 
 1. Validate WhatsApp session survives connector restart locally and then on Railway with `WHATSAPP_SESSION_BACKUP_FILE` on durable storage.
-2. Extend Slack beyond selected-channel skeleton: DMs, thread replies, and proper OAuth/token storage.
+2. Add proper Slack OAuth/token storage beyond the current manual bot-token env setup.
 3. Apply DB migration once `DATABASE_URL` target is confirmed.
 4. Add virtualized lists or pagination once feeds/chats are large enough to need it.
 

@@ -42,6 +42,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Workspace shell has a basic command palette via ⌘K/Ctrl+K for page navigation.
 - Integrations page has a Sync Health panel backed by `/api/sync-health` for env/config checks, WhatsApp connector health, failed sends, and recent sync jobs.
 - Initial Drizzle migration file generated, including DB indexes for ActivityItems, messages, notes, AI summaries, and sync jobs.
+- Slack integration now lists/sends to DMs, syncs selected DMs via `SLACK_SELECTED_DMS`, syncs thread replies, and exposes thread reply sending with an optional thread timestamp.
 
 ## Immediate priority
 
@@ -93,12 +94,12 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] List Slack channels.
 - [x] Allow selected channels only.
 - [x] Sync selected channel messages.
-- [ ] Sync DMs.
+- [x] Sync DMs.
 - [x] Track mentions.
-- [ ] Track threads involving user.
+- [x] Track threads involving user.
 - [x] Send channel messages.
-- [ ] Send DMs.
-- [ ] Reply in threads.
+- [x] Send DMs.
+- [x] Reply in threads.
 - [x] Convert events to ActivityItems.
 
 ### WhatsApp integration
