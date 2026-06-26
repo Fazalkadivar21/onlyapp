@@ -39,6 +39,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - WhatsApp composer can upload local files to Cloudinary through `/api/media/upload` before sending media.
 - WhatsApp connector can create/restore an encrypted Baileys session backup using `ENCRYPTION_KEY` and `WHATSAPP_SESSION_BACKUP_FILE`.
 - Slack can send channel messages through `SLACK_BOT_TOKEN`, with a simple Integrations-page composer and DB outgoing message status when configured.
+- Workspace shell has a basic command palette via ⌘K/Ctrl+K for page navigation.
 
 ## Immediate priority
 
@@ -176,8 +177,8 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Add skeleton loading.
 - [ ] Add virtualized lists.
 - [ ] Add DB indexes.
-- [ ] Add command palette.
-- [ ] Add keyboard shortcuts.
+- [x] Add command palette.
+- [x] Add keyboard shortcuts.
 - [ ] Add retry states.
 - [ ] Add sync health UI.
 - [ ] Add error boundaries.

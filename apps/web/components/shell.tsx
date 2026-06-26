@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell, CheckSquare, FileText, Home, Inbox, Plug, Settings } from "lucide-react";
+import { CommandPalette } from "@/components/command-palette";
 
 const nav = [
   { href: "/", label: "Home", icon: Home },
@@ -38,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="text-sm font-medium text-zinc-500">Personal unified workspace</p>
               <h2 className="text-2xl font-semibold">Today&apos;s work, one surface.</h2>
             </div>
-            <div className="rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-500">Search coming soon ⌘K</div>
+            <CommandPalette />
           </header>
           {children}
         </div>
