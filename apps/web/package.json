@@ -15,6 +15,7 @@
     "@mark-1/integrations": "workspace:^",
     "@mark-1/shared": "workspace:*",
     "@tanstack/react-query": "^5.64.2",
+    "bullmq": "^5.34.2",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.38.3",
     "lucide-react": "^0.468.0",

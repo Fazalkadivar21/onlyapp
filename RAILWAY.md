@@ -23,3 +23,5 @@ Deploy three Railway services from this monorepo:
 - Healthcheck: `/health`
 
 Use external Postgres and Cloudinary. Do not store WhatsApp media or sessions in local ephemeral disk long-term.
+
+Set the same `APP_URL`, `REDIS_URL`, and optional `WORKER_TOKEN` on web and worker so queued Daily Brief jobs can call back into the web app and update `sync_jobs`.

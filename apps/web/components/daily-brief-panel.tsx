@@ -16,6 +16,8 @@ export function DailyBriefPanel() {
   const [brief, setBrief] = useState<DailyBriefResponse>();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [queueing, setQueueing] = useState(false);
+  const [queueResult, setQueueResult] = useState<string>();
   const [providerChoice, setProviderChoice] = useState<AiProviderChoice>("auto");
   const [model, setModel] = useState("");
 
@@ -29,17 +31,23 @@ export function DailyBriefPanel() {
     }
   }
 
-  async function generateBrief() {
-    setGenerating(true);
+  async function generateBrief(queued = false) {
+    queued ? setQueueing(true) : setGenerating(true);
+    setQueueResult(undefined);
     try {
       const response = await fetch("/api/daily-brief", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ provider: providerChoice === "auto" ? undefined : providerChoice, model: model.trim() || undefined })
+        body: JSON.stringify({ async: queued, provider: providerChoice === "auto" ? undefined : providerChoice, model: model.trim() || undefined })
       });
-      setBrief((await response.json()) as DailyBriefResponse);
+      const payload = (await response.json()) as DailyBriefResponse & { queued?: boolean; jobId?: string; syncJobId?: string };
+      if (payload.queued) {
+        setQueueResult(`Queued daily brief job${payload.syncJobId ? ` · ${payload.syncJobId.slice(0, 8)}` : ""}. Check Sync Health for status.`);
+      } else {
+        setBrief(payload);
+      }
     } finally {
-      setGenerating(false);
+      queued ? setQueueing(false) : setGenerating(false);
     }
   }
 
@@ -75,8 +83,11 @@ export function DailyBriefPanel() {
             className="w-40 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             aria-label="AI model override"
           />
-          <button onClick={generateBrief} disabled={generating} className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+          <button onClick={() => void generateBrief(false)} disabled={generating || queueing} className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
             {generating ? "Generating…" : "Generate"}
+          </button>
+          <button onClick={() => void generateBrief(true)} disabled={generating || queueing} className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50">
+            {queueing ? "Queueing…" : "Queue"}
           </button>
         </div>
       </div>
@@ -84,6 +95,7 @@ export function DailyBriefPanel() {
       <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-zinc-700">
         {loading ? "Loading daily brief…" : brief?.brief}
       </div>
+      {queueResult ? <p className="mt-3 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">{queueResult}</p> : null}
       {brief?.model ? <p className="mt-3 text-xs text-zinc-500">Model: {brief.model}</p> : null}
       {brief?.error ? <p className="mt-3 text-xs text-amber-700">AI failed; showing heuristic fallback.</p> : null}
     </div>

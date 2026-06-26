@@ -47,6 +47,7 @@ Implemented:
 - GitHub PR integration now extracts Jira issue keys from PR titles, exposes them in the PR list, and stores them in normalized ActivityItem metadata/body for cross-source linking.
 - Web app now has Next.js `error.tsx` and `global-error.tsx` recovery screens with retry/home actions and scrubbed error details.
 - Daily Brief UI can choose OpenAI/Anthropic/Ollama/auto and an optional model override when generating a fresh brief; `/api/daily-brief` passes the override through to the provider and caches model metadata.
+- Daily Brief UI can queue generation through BullMQ when `REDIS_URL` is configured. The worker processes `daily-brief` jobs by calling back into `/api/daily-brief`, and `/api/internal/sync-jobs` lets the worker mark queued jobs processing/completed/failed.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
 - DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, note links, AI summary cache lookups, and sync job health queries.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
@@ -123,6 +124,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding GitHub-to-Jira key extraction — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding web error boundaries — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Daily Brief model/provider selection — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding async Daily Brief queue jobs — passed.
 
 Notes:
 

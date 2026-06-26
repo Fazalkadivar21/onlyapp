@@ -19,7 +19,7 @@ export async function GET() {
     envCheck("redis", "Redis / queues", Boolean(process.env.REDIS_URL), "REDIS_URL configured", "Queues not configured yet"),
     envCheck("slack", "Slack", Boolean(process.env.SLACK_BOT_TOKEN), "SLACK_BOT_TOKEN configured", "Slack token missing"),
     envCheck("github", "GitHub", Boolean(process.env.GITHUB_TOKEN), "GITHUB_TOKEN configured", "GitHub token missing"),
-    envCheck("jira", "Jira", Boolean(process.env.JIRA_BASE_URL && process.env.JIRA_EMAIL && process.env.JIRA_API_TOKEN), "Jira env configured", "Jira env missing"),
+    envCheck("jira", "Jira", Boolean(process.env.JIRA_SITE_URL && process.env.JIRA_EMAIL && process.env.JIRA_API_TOKEN), "Jira env configured", "Jira env missing"),
     envCheck("cloudinary", "Cloudinary", Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET), "Cloudinary env configured", "Media upload env missing"),
     envCheck("ai", "AI provider", Boolean(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OLLAMA_BASE_URL), "At least one AI provider configured", "No AI provider configured")
   ];

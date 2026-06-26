@@ -53,6 +53,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - GitHub PR sync now extracts Jira issue keys from PR titles, stores them in ActivityItem metadata, and shows Jira key badges in the GitHub panel.
 - Next.js route/global error boundaries added with retry/home recovery UI and scrubbed error display.
 - Daily Brief generation now supports AI provider/model selection overrides from the UI and stores the chosen model in summary metadata.
+- Daily Brief can now be queued as a BullMQ worker job; worker calls back into the app to generate/cache the brief and updates `sync_jobs` status.
 
 ## Immediate priority
 
@@ -177,7 +178,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Add Anthropic provider.
 - [x] Add Ollama provider via base URL.
 - [x] Add model selection.
-- [ ] Add async summary jobs.
+- [x] Add async summary jobs.
 - [x] Cache summaries.
 - [x] Generate Daily Brief.
 - [ ] Generate Slack thread summaries.

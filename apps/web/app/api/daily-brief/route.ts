@@ -1,7 +1,8 @@
-import { activityItems, aiSummaries, createDb } from "@mark-1/db";
+import { activityItems, aiSummaries, createDb, syncJobs } from "@mark-1/db";
 import { createAiProvider } from "@mark-1/integrations";
 import { mockActivityItems, type ActivityItem } from "@mark-1/shared";
 import { desc, eq } from "drizzle-orm";
+import { createQueue } from "@/lib/queue";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const input = toGenerateBriefInput(await request.json().catch(() => null));
+
+  if (input.async) {
+    const queued = await queueDailyBrief(input);
+    if (queued) return Response.json(queued, { status: 202 });
+  }
+
   const items = await loadActivityItems();
   const provider = createAiProvider(input.provider, input.model);
 
@@ -79,12 +86,35 @@ async function saveBrief(content: string, provider: string, metadata: Record<str
   }
 }
 
+async function queueDailyBrief(input: { provider?: string; model?: string; async?: boolean }) {
+  const queue = createQueue("daily-brief");
+  if (!queue) return null;
+
+  const syncJobId = await createSyncJob("daily_brief", { provider: input.provider, model: input.model });
+  const job = await queue.add("generate", { syncJobId, provider: input.provider, model: input.model }, { attempts: 2, backoff: { type: "exponential", delay: 3000 } });
+  await queue.close();
+  return { queued: true, jobId: job.id, syncJobId };
+}
+
+async function createSyncJob(source: string, metadata: Record<string, unknown>) {
+  if (!process.env.DATABASE_URL) return undefined;
+
+  try {
+    const db = createDb();
+    const [job] = await db.insert(syncJobs).values({ source, status: "queued", metadata }).returning({ id: syncJobs.id });
+    return job?.id;
+  } catch {
+    return undefined;
+  }
+}
+
 function toGenerateBriefInput(value: unknown) {
   if (!isRecord(value)) return {};
 
   const provider = typeof value.provider === "string" && ["openai", "anthropic", "ollama"].includes(value.provider) ? value.provider : undefined;
   const model = typeof value.model === "string" && value.model.trim() ? value.model.trim().slice(0, 100) : undefined;
-  return { provider, model };
+  const async = value.async === true;
+  return { provider, model, async };
 }
 
 function buildDailyBriefPrompt(items: ActivityItem[]) {
