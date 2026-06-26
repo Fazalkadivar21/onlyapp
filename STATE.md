@@ -42,6 +42,7 @@ Implemented:
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
 - WhatsApp media sending exists: web `/api/messages/whatsapp`, the inbox composer, and connector `/send` accept media URLs for image/video/document/audio sends with optional caption/file name.
 - WhatsApp session persistence now has an encrypted backup path: connector restores `WHATSAPP_SESSION_BACKUP_FILE` into `WHATSAPP_SESSION_DIR` before Baileys starts, and backs up session files after credential updates when `ENCRYPTION_KEY` is configured.
+- WhatsApp integration panel displays session directory, encrypted backup configuration, backup file path, last backup time, and backup errors from connector health state.
 - `.env.example` with required environment variable names only.
 - `RAILWAY.md` deployment notes for web, worker, and WhatsApp connector services.
 
@@ -91,6 +92,7 @@ packages/integrations
 - Re-ran `pnpm install`, `pnpm typecheck`, `pnpm lint`, and `pnpm build` after WhatsApp incoming media download/upload support — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after WhatsApp media URL send support — passed. First parallel lint/build run had a transient `.next/types` race; rerunning lint after build passed.
 - Re-ran `pnpm --filter @mark-1/whatsapp-connector typecheck`, `pnpm typecheck`, `pnpm build`, and `pnpm lint` after encrypted WhatsApp session backup support — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding WhatsApp session backup status UI — passed.
 
 Notes:
 

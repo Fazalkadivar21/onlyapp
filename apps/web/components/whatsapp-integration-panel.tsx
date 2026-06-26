@@ -7,6 +7,10 @@ type WhatsAppState = {
   qr?: string | null;
   lastError?: string | null;
   sessionDir?: string;
+  sessionBackupConfigured?: boolean;
+  sessionBackupFile?: string | null;
+  lastSessionBackupAt?: string | null;
+  lastSessionBackupError?: string | null;
   chats?: number;
   selectedChats?: number;
 };
@@ -95,6 +99,16 @@ export function WhatsAppIntegrationPanel() {
       </div>
 
       {payload.error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{payload.error}</p> : null}
+
+      {payload.state ? (
+        <div className="mt-4 grid gap-3 rounded-2xl bg-zinc-50 p-4 text-xs text-zinc-600 md:grid-cols-2">
+          <div><span className="font-medium text-zinc-900">Session dir:</span> {payload.state.sessionDir ?? "unknown"}</div>
+          <div><span className="font-medium text-zinc-900">Encrypted backup:</span> {payload.state.sessionBackupConfigured ? "configured" : "missing ENCRYPTION_KEY"}</div>
+          {payload.state.sessionBackupFile ? <div className="truncate"><span className="font-medium text-zinc-900">Backup file:</span> {payload.state.sessionBackupFile}</div> : null}
+          <div><span className="font-medium text-zinc-900">Last backup:</span> {payload.state.lastSessionBackupAt ? new Date(payload.state.lastSessionBackupAt).toLocaleString() : "not yet"}</div>
+          {payload.state.lastSessionBackupError ? <div className="md:col-span-2 text-red-600"><span className="font-medium">Backup error:</span> {payload.state.lastSessionBackupError}</div> : null}
+        </div>
+      ) : null}
 
       {payload.qrDataUrl ? (
         <div className="mt-5 flex flex-wrap items-center gap-5 rounded-2xl border border-dashed border-zinc-300 p-4">

@@ -7,6 +7,10 @@ type ConnectorState = {
   qr?: string | null;
   lastError?: string | null;
   sessionDir?: string;
+  sessionBackupConfigured?: boolean;
+  sessionBackupFile?: string | null;
+  lastSessionBackupAt?: string | null;
+  lastSessionBackupError?: string | null;
   chats?: number;
   selectedChats?: number;
 };
