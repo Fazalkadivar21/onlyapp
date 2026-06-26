@@ -44,6 +44,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Initial Drizzle migration file generated, including DB indexes for ActivityItems, messages, notes, AI summaries, and sync jobs.
 - Slack integration now lists/sends to DMs, syncs selected DMs via `SLACK_SELECTED_DMS`, syncs thread replies, and exposes thread reply sending with an optional thread timestamp.
 - Slack OAuth connect flow added; bot tokens can now be stored encrypted in DB and used by Slack list/sync/send routes when `SLACK_BOT_TOKEN` is not set.
+- Slack selected channels/DMs can now be toggled in the Integrations UI and persisted in integration metadata, while env selections remain supported.
 
 ## Immediate priority
 
@@ -94,6 +95,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Fetch workspace/user info.
 - [x] List Slack channels.
 - [x] Allow selected channels only.
+- [x] Persist selected Slack channels/DMs from UI.
 - [x] Sync selected channel messages.
 - [x] Sync DMs.
 - [x] Track mentions.

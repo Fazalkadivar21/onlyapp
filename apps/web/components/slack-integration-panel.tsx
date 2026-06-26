@@ -31,6 +31,7 @@ export function SlackIntegrationPanel() {
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [savingSelection, setSavingSelection] = useState(false);
   const [syncResult, setSyncResult] = useState<string>();
   const [sendChannelId, setSendChannelId] = useState("");
   const [sendText, setSendText] = useState("");
@@ -59,6 +60,41 @@ export function SlackIntegrationPanel() {
       setError(error instanceof Error ? error.message : "request_failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveSelection(nextChannels = selectedChannels, nextDms = selectedDms) {
+    setSavingSelection(true);
+    setSyncResult(undefined);
+    try {
+      const response = await fetch("/api/integrations/slack/channels", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ selectedChannels: nextChannels, selectedDms: nextDms })
+      });
+      const payload = (await response.json()) as { selectedChannels?: string[]; selectedDms?: string[]; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "selection_save_failed");
+      setSelectedChannels(payload.selectedChannels ?? nextChannels);
+      setSelectedDms(payload.selectedDms ?? nextDms);
+      setChannels((items) => items.map((item) => ({ ...item, selected: item.kind === "dm" ? (payload.selectedDms ?? nextDms).includes(item.id) : (payload.selectedChannels ?? nextChannels).includes(item.id) })));
+      setSyncResult("Slack selection saved");
+    } catch (error) {
+      setSyncResult(error instanceof Error ? error.message : "selection_save_failed");
+    } finally {
+      setSavingSelection(false);
+    }
+  }
+
+  function toggleSelection(channel: SlackChannel) {
+    const isDm = channel.kind === "dm";
+    const current = isDm ? selectedDms : selectedChannels;
+    const next = current.includes(channel.id) ? current.filter((id) => id !== channel.id) : [...current, channel.id];
+    if (isDm) {
+      setSelectedDms(next);
+      void saveSelection(selectedChannels, next);
+    } else {
+      setSelectedChannels(next);
+      void saveSelection(next, selectedDms);
     }
   }
 
@@ -104,7 +140,7 @@ export function SlackIntegrationPanel() {
     void loadChannels();
   }, []);
 
-  const selected = channels.filter((channel) => channel.selected);
+  const selected = channels.filter((channel) => (channel.kind === "dm" ? selectedDms : selectedChannels).includes(channel.id));
 
   return (
     <article className="rounded-3xl bg-white p-6 shadow-sm md:col-span-2">
@@ -117,14 +153,14 @@ export function SlackIntegrationPanel() {
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs">{configured ? "configured" : "not configured"}</span>
           {oauthConfigured ? <a href="/api/integrations/slack/oauth/start" className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-medium">Connect OAuth</a> : null}
           <button onClick={loadChannels} disabled={loading} className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-medium disabled:opacity-50">Refresh</button>
-          <button onClick={syncToInbox} disabled={syncing || (selectedChannels.length === 0 && selectedDms.length === 0)} className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{syncing ? "Syncing…" : "Sync selected"}</button>
+          <button onClick={syncToInbox} disabled={syncing || savingSelection || (selectedChannels.length === 0 && selectedDms.length === 0)} className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{syncing ? "Syncing…" : "Sync selected"}</button>
         </div>
       </div>
 
       {error ? <div className="mt-4"><ErrorNotice title="Slack unavailable" message={error} action={<button onClick={loadChannels} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /></div> : null}
       {syncResult ? <p className="mt-4 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">{syncResult}</p> : null}
-      {selectedChannels.length > 0 ? <p className="mt-4 text-xs text-zinc-500">Selected channels from env: {selectedChannels.join(", ")}</p> : null}
-      {selectedDms.length > 0 ? <p className="mt-1 text-xs text-zinc-500">Selected DMs from env: {selectedDms.join(", ")}</p> : null}
+      {selectedChannels.length > 0 ? <p className="mt-4 text-xs text-zinc-500">Selected channels: {selectedChannels.join(", ")}</p> : null}
+      {selectedDms.length > 0 ? <p className="mt-1 text-xs text-zinc-500">Selected DMs: {selectedDms.join(", ")}</p> : null}
 
       <div className="mt-5 rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
         <div className="grid gap-3 md:grid-cols-[240px_1fr_auto]">
@@ -159,7 +195,7 @@ export function SlackIntegrationPanel() {
           <div key={channel.id} className="rounded-2xl border border-zinc-100 p-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-medium">{channel.kind === "dm" ? "DM " : "#"}{channel.name}</h3>
-              <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">{channel.selected ? "selected" : channel.kind === "dm" ? "dm" : channel.isPrivate ? "private" : "public"}</span>
+              <button onClick={() => toggleSelection(channel)} disabled={savingSelection} className="rounded-full bg-zinc-100 px-2 py-1 text-xs disabled:opacity-50">{(channel.kind === "dm" ? selectedDms : selectedChannels).includes(channel.id) ? "selected" : "select"}</button>
             </div>
             <p className="mt-2 text-xs text-zinc-500">{channel.id} · {channel.isMember ? "bot is member" : "bot may need invite"}</p>
           </div>

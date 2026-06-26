@@ -38,7 +38,7 @@ Implemented:
 - Daily Brief page uses `/api/daily-brief`; it reads cached ActivityItems, generates/caches DB summaries in `ai_summaries`, and falls back to a heuristic brief when no AI provider is configured or AI fails.
 - GitHub integration skeleton exists: `packages/integrations/src/github.ts` fetches open PRs using `GITHUB_TOKEN` and optional `GITHUB_REPOSITORIES`; `/api/integrations/github/prs` lists PRs and can sync them into normalized ActivityItems; Integrations page has a GitHub PR panel.
 - Jira integration skeleton exists: `packages/integrations/src/jira.ts` fetches active sprint issues with `JIRA_BOARD_ID` or assigned project issues with `JIRA_PROJECT_KEY`; `/api/integrations/jira/issues` lists issues and can sync them into normalized ActivityItems; Integrations page has a Jira panel.
-- Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels and DMs via `SLACK_BOT_TOKEN` or an encrypted OAuth bot token from DB, reads `SLACK_SELECTED_CHANNELS` and `SLACK_SELECTED_DMS`, fetches recent selected-channel/DM messages plus thread replies, detects mentions of the authenticated bot/user, normalizes messages into ActivityItems, and can send channel/DM/thread messages; Integrations page has a Slack panel with a simple composer, optional thread timestamp, and OAuth connect link.
+- Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels and DMs via `SLACK_BOT_TOKEN` or an encrypted OAuth bot token from DB, reads `SLACK_SELECTED_CHANNELS`/`SLACK_SELECTED_DMS` plus DB-persisted channel/DM selections from integration metadata, fetches recent selected-channel/DM messages plus thread replies, detects mentions of the authenticated bot/user, normalizes messages into ActivityItems, and can send channel/DM/thread messages; Integrations page has a Slack panel with a simple composer, optional thread timestamp, OAuth connect link, and selected channel/DM toggles.
 - Slack OAuth routes exist under `/api/integrations/slack/oauth/start` and `/callback`; callback exchanges the code, creates a default single-user record when needed, stores integration metadata, and inserts encrypted Slack token payload into `integration_secrets`.
 - Workspace shell includes a client command palette opened with ⌘K/Ctrl+K for quick page navigation.
 - Activity feeds and integration panels now show skeleton loading cards plus retryable error notices for failed fetches.
@@ -108,6 +108,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after DB indexes/migration — passed.
 - Re-ran `pnpm typecheck`, `pnpm lint`, and `pnpm build` after Slack DM/thread support — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Slack OAuth encrypted token storage — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Slack DB-backed selected channel/DM toggles — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
 
 Notes:
 
@@ -132,7 +133,7 @@ Notes:
 ## Next agent should do
 
 1. Validate WhatsApp session survives connector restart locally and then on Railway with `WHATSAPP_SESSION_BACKUP_FILE` on durable storage.
-2. Smoke-test Slack OAuth against a real Slack app, then add selected channel/DM persistence in DB instead of env-only selection.
+2. Smoke-test Slack OAuth and DB-backed selected channel/DM toggles against a real Slack app.
 3. Apply DB migration once `DATABASE_URL` target is confirmed.
 4. Add virtualized lists or pagination once feeds/chats are large enough to need it.
 
