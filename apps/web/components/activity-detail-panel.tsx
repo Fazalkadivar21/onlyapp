@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ActivityItem, ActivityStatus } from "@mark-1/shared";
 import { PriorityBadge, SourceBadge, StatusBadge } from "./badges";
 
@@ -9,6 +10,30 @@ type ReplyTarget = {
 };
 
 export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNote }: { item?: ActivityItem; onReply: (target: ReplyTarget) => void; onStatusChange: (status: ActivityStatus) => void; onCreateNote: (item: ActivityItem) => void }) {
+  const [drafting, setDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string>();
+
+  async function draftReply(target: ReplyTarget) {
+    if (!item) return;
+    setDrafting(true);
+    setDraftError(undefined);
+
+    try {
+      const response = await fetch("/api/ai/reply-draft", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source: item.source, title: item.title, body: item.body, actorName: item.actorName })
+      });
+      const payload = (await response.json()) as { draft?: string; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "draft_failed");
+      onReply({ ...target, draft: payload.draft ?? target.draft });
+    } catch (error) {
+      setDraftError(error instanceof Error ? error.message : "draft_failed");
+    } finally {
+      setDrafting(false);
+    }
+  }
+
   if (!item) {
     return (
       <aside className="rounded-3xl border border-dashed border-zinc-300 bg-white/70 p-6 text-sm text-zinc-500">
@@ -62,13 +87,24 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
           ))}
         </div>
         {whatsappChatId ? (
-          <button
-            type="button"
-            onClick={() => onReply({ chatId: whatsappChatId, draft: `Re: ${item.actorName} — ` })}
-            className="rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
-          >
-            Reply on WhatsApp
-          </button>
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={() => onReply({ chatId: whatsappChatId, draft: `Re: ${item.actorName} — ` })}
+              className="rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white"
+            >
+              Reply on WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => void draftReply({ chatId: whatsappChatId, draft: `Re: ${item.actorName} — ` })}
+              disabled={drafting}
+              className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium disabled:opacity-50"
+            >
+              {drafting ? "Drafting…" : "Draft AI reply"}
+            </button>
+            {draftError ? <p className="text-xs text-amber-700">Draft failed: {draftError}</p> : null}
+          </div>
         ) : (
           <button type="button" disabled className="rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-400">
             Reply action not wired for {item.source}

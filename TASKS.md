@@ -54,6 +54,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Next.js route/global error boundaries added with retry/home recovery UI and scrubbed error display.
 - Daily Brief generation now supports AI provider/model selection overrides from the UI and stores the chosen model in summary metadata.
 - Daily Brief can now be queued as a BullMQ worker job; worker calls back into the app to generate/cache the brief and updates `sync_jobs` status.
+- Inbox WhatsApp detail panel can generate suggested AI reply drafts via `/api/ai/reply-draft`, with heuristic fallback when no provider is configured.
 
 ## Immediate priority
 
@@ -185,7 +186,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Generate WhatsApp chat summaries.
 - [ ] Generate PR summaries.
 - [ ] Generate sprint summaries.
-- [ ] Generate suggested reply drafts.
+- [x] Generate suggested reply drafts.
 
 ### Performance/polish
 
