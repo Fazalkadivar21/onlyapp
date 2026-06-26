@@ -57,6 +57,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Inbox WhatsApp detail panel can generate suggested AI reply drafts via `/api/ai/reply-draft`, with heuristic fallback when no provider is configured.
 - Inbox Slack ActivityItem detail panel now has inline Slack thread/channel reply sending and AI draft generation.
 - ActivityItem detail panel now has AI summaries via `/api/ai/activity-summary` with heuristic fallback for Slack, WhatsApp, GitHub, and Jira items.
+- Jira sync now updates existing issue ActivityItems and creates separate `issue_status_change` ActivityItems when a synced issue status changes.
 
 ## Immediate priority
 
@@ -157,7 +158,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Select site/project/board.
 - [x] Fetch active sprint.
 - [x] Fetch sprint issues.
-- [ ] Track ticket status changes.
+- [x] Track ticket status changes.
 - [x] Track assigned tickets.
 - [x] Parse ticket keys from GitHub PRs.
 - [x] Link PRs to Jira tickets.
