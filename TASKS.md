@@ -36,6 +36,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Slack integration has a bot-token selected-channel skeleton and can sync recent selected-channel messages/mentions into normalized ActivityItems.
 - WhatsApp connector downloads incoming image/video/document/audio messages from selected chats and uploads them to Cloudinary when configured, attaching media metadata to ActivityItems.
 - WhatsApp composer/API/connector can send image/video/document/audio messages by media URL, with optimistic UI status.
+- WhatsApp composer can upload local files to Cloudinary through `/api/media/upload` before sending media.
 - WhatsApp connector can create/restore an encrypted Baileys session backup using `ENCRYPTION_KEY` and `WHATSAPP_SESSION_BACKUP_FILE`.
 
 ## Immediate priority

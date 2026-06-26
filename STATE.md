@@ -41,6 +41,7 @@ Implemented:
 - Slack integration skeleton exists: `packages/integrations/src/slack.ts` lists channels via `SLACK_BOT_TOKEN`, reads `SLACK_SELECTED_CHANNELS`, fetches recent selected-channel messages, detects mentions of the authenticated bot/user, and normalizes messages into ActivityItems; Integrations page has a Slack panel.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
 - WhatsApp media sending exists: web `/api/messages/whatsapp`, the inbox composer, and connector `/send` accept media URLs for image/video/document/audio sends with optional caption/file name.
+- WhatsApp composer now supports local file upload: `/api/media/upload` accepts multipart files up to 25MB, uploads them to Cloudinary, infers media type, and fills the media send fields.
 - WhatsApp session persistence now has an encrypted backup path: connector restores `WHATSAPP_SESSION_BACKUP_FILE` into `WHATSAPP_SESSION_DIR` before Baileys starts, and backs up session files after credential updates when `ENCRYPTION_KEY` is configured.
 - WhatsApp integration panel displays session directory, encrypted backup configuration, backup file path, last backup time, and backup errors from connector health state.
 - `.env.example` with required environment variable names only.
@@ -93,6 +94,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after WhatsApp media URL send support — passed. First parallel lint/build run had a transient `.next/types` race; rerunning lint after build passed.
 - Re-ran `pnpm --filter @mark-1/whatsapp-connector typecheck`, `pnpm typecheck`, `pnpm build`, and `pnpm lint` after encrypted WhatsApp session backup support — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding WhatsApp session backup status UI — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding web media upload for WhatsApp sends — passed.
 
 Notes:
 
@@ -117,8 +119,8 @@ Notes:
 ## Next agent should do
 
 1. Validate WhatsApp session survives connector restart locally and then on Railway with `WHATSAPP_SESSION_BACKUP_FILE` on durable storage.
-2. Add safer media upload UX for WhatsApp sends instead of requiring pasted media URLs.
-3. Extend Slack beyond selected-channel skeleton: DMs, thread replies, send API, and proper OAuth/token storage.
+2. Extend Slack beyond selected-channel skeleton: DMs, thread replies, send API, and proper OAuth/token storage.
+3. Add command palette / keyboard shortcuts for faster workspace navigation.
 4. Add DB migrations generation once `DATABASE_URL` target is confirmed.
 
 ## Known blockers / missing information
