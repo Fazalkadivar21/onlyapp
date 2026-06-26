@@ -44,6 +44,7 @@ Implemented:
 - Activity feeds and integration panels now show skeleton loading cards plus retryable error notices for failed fetches.
 - Unified Inbox search now queries `/api/activity-items` by title/body/actor/type and supports source/status/priority query filters with mock fallback.
 - Activity feeds now request paginated ActivityItems with `limit`/`offset`, expose Load More, and send action-queue filtering to the API instead of only filtering the first page client-side.
+- GitHub PR integration now extracts Jira issue keys from PR titles, exposes them in the PR list, and stores them in normalized ActivityItem metadata/body for cross-source linking.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
 - DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, note links, AI summary cache lookups, and sync job health queries.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
@@ -117,6 +118,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after ActivityItem linked-note creation — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Inbox ActivityItem search — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding ActivityItem feed pagination — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding GitHub-to-Jira key extraction — passed.
 
 Notes:
 

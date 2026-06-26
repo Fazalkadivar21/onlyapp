@@ -50,6 +50,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Notes can now be created from ActivityItems via the inbox detail panel, with `note_links` persisted in DB.
 - Unified Inbox now has text search backed by `/api/activity-items?q=...`, including synced WhatsApp ActivityItems.
 - Activity feeds now load ActivityItems in pages with a Load More button and server-side action queue filtering.
+- GitHub PR sync now extracts Jira issue keys from PR titles, stores them in ActivityItem metadata, and shows Jira key badges in the GitHub panel.
 
 ## Immediate priority
 
@@ -151,8 +152,8 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Fetch sprint issues.
 - [ ] Track ticket status changes.
 - [x] Track assigned tickets.
-- [ ] Parse ticket keys from GitHub PRs.
-- [ ] Link PRs to Jira tickets.
+- [x] Parse ticket keys from GitHub PRs.
+- [x] Link PRs to Jira tickets.
 - [x] Build sprint progress widget.
 - [x] Store Jira events as ActivityItems.
 

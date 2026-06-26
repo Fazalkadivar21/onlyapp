@@ -13,6 +13,7 @@ type GitHubPullRequest = {
   author: string;
   draft: boolean;
   kind?: "created" | "review_requested" | "mention" | "merged" | "failed_check";
+  jiraKeys?: string[];
   updatedAt: string;
 };
 
@@ -93,6 +94,11 @@ export function GitHubIntegrationPanel() {
               <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">{labelForKind(pr.kind, pr.draft, pr.state)}</span>
             </div>
             <p className="mt-2 text-xs text-zinc-500">By {pr.author} · updated {new Date(pr.updatedAt).toLocaleString()}</p>
+            {pr.jiraKeys && pr.jiraKeys.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {pr.jiraKeys.map((key) => <span key={key} className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">{key}</span>)}
+              </div>
+            ) : null}
           </a>
         ))}
       </div>

@@ -12,6 +12,7 @@ export type GitHubPullRequest = {
   author: string;
   draft: boolean;
   kind: GitHubPullRequestKind;
+  jiraKeys: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -88,12 +89,13 @@ export async function fetchGitHubPullRequestActivity(input: { token?: string; re
 
 export function normalizeGitHubPullRequest(pr: GitHubPullRequest): Omit<ActivityItem, "id" | "createdAt" | "updatedAt"> {
   const priority = priorityForKind(pr.kind, pr.draft);
+  const jiraSuffix = pr.jiraKeys.length > 0 ? ` Linked Jira: ${pr.jiraKeys.join(", ")}.` : "";
   return {
     source: "github",
     sourceId: `github_pr_${pr.kind}_${pr.id}`,
     type: `pull_request_${pr.kind}`,
     title: `${labelForKind(pr.kind)}: ${pr.repository}#${pr.number}`,
-    body: `${pr.title} — ${pr.author} ${bodyVerbForKind(pr.kind)} ${pr.draft ? "draft " : ""}PR #${pr.number}.`,
+    body: `${pr.title} — ${pr.author} ${bodyVerbForKind(pr.kind)} ${pr.draft ? "draft " : ""}PR #${pr.number}.${jiraSuffix}`,
     actorName: pr.author,
     url: pr.htmlUrl,
     priority,
@@ -104,9 +106,15 @@ export function normalizeGitHubPullRequest(pr: GitHubPullRequest): Omit<Activity
       state: pr.state,
       draft: pr.draft,
       kind: pr.kind,
+      jiraKeys: pr.jiraKeys,
       updatedAt: pr.updatedAt
     }
   };
+}
+
+export function parseJiraIssueKeys(value: string) {
+  const matches = value.toUpperCase().match(/\b[A-Z][A-Z0-9]+-\d+\b/g) ?? [];
+  return [...new Set(matches)];
 }
 
 function parseRepositories(value: string | undefined) {
@@ -155,6 +163,7 @@ function toPullRequestFromSearchIssue(issue: GitHubSearchIssue, kind: GitHubPull
     author: issue.user?.login ?? "GitHub",
     draft: Boolean(issue.draft),
     kind,
+    jiraKeys: parseJiraIssueKeys(issue.title),
     createdAt: issue.created_at,
     updatedAt: issue.updated_at
   };
@@ -171,6 +180,7 @@ function toPullRequestFromPull(pull: GitHubPull, kind: GitHubPullRequestKind): G
     author: pull.user?.login ?? "GitHub",
     draft: Boolean(pull.draft),
     kind,
+    jiraKeys: parseJiraIssueKeys(pull.title),
     createdAt: pull.created_at,
     updatedAt: pull.updated_at
   };
