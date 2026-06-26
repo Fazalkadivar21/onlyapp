@@ -1,5 +1,6 @@
 import { createDb, messages } from "@mark-1/db";
 import { sendSlackMessage } from "@mark-1/integrations";
+import { resolveSlackBotToken } from "@/lib/slack-token";
 import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,10 @@ export async function POST(request: Request) {
   const dbMessageId = await createPendingMessage(body);
 
   try {
-    const result = await sendSlackMessage(body);
+    const token = await resolveSlackBotToken();
+    if (!token) throw new Error("Slack is not connected. Set SLACK_BOT_TOKEN or connect OAuth.");
+
+    const result = await sendSlackMessage({ ...body, token });
     await updateMessageStatus(dbMessageId, "sent", result.ts);
     return Response.json({ status: "sent", messageId: dbMessageId, externalId: result.ts, result });
   } catch (error) {

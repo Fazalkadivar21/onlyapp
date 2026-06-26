@@ -14,6 +14,7 @@ type SlackChannel = {
 
 type SlackChannelsResponse = {
   configured?: boolean;
+  oauthConfigured?: boolean;
   selectedChannels: string[];
   selectedDms?: string[];
   channels: SlackChannel[];
@@ -26,6 +27,7 @@ export function SlackIntegrationPanel() {
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [selectedDms, setSelectedDms] = useState<string[]>([]);
   const [configured, setConfigured] = useState(false);
+  const [oauthConfigured, setOauthConfigured] = useState(false);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -43,6 +45,7 @@ export function SlackIntegrationPanel() {
       const response = await fetch("/api/integrations/slack/channels", { cache: "no-store" });
       const payload = (await response.json()) as SlackChannelsResponse;
       setConfigured(Boolean(payload.configured));
+      setOauthConfigured(Boolean(payload.oauthConfigured));
       const nextChannels = [...(payload.channels ?? []), ...(payload.dms ?? [])];
       setChannels(nextChannels);
       setSelectedChannels(payload.selectedChannels ?? []);
@@ -108,10 +111,11 @@ export function SlackIntegrationPanel() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">Slack channels</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">Lists Slack channels/DMs via `SLACK_BOT_TOKEN`; syncs `SLACK_SELECTED_CHANNELS` and `SLACK_SELECTED_DMS`. Set `SLACK_USER_ID` to detect personal mentions.</p>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">Lists Slack channels/DMs via env token or OAuth; syncs `SLACK_SELECTED_CHANNELS` and `SLACK_SELECTED_DMS`. Set `SLACK_USER_ID` to detect personal mentions.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs">{configured ? "configured" : "not configured"}</span>
+          {oauthConfigured ? <a href="/api/integrations/slack/oauth/start" className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-medium">Connect OAuth</a> : null}
           <button onClick={loadChannels} disabled={loading} className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-medium disabled:opacity-50">Refresh</button>
           <button onClick={syncToInbox} disabled={syncing || (selectedChannels.length === 0 && selectedDms.length === 0)} className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{syncing ? "Syncing…" : "Sync selected"}</button>
         </div>

@@ -43,6 +43,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Integrations page has a Sync Health panel backed by `/api/sync-health` for env/config checks, WhatsApp connector health, failed sends, and recent sync jobs.
 - Initial Drizzle migration file generated, including DB indexes for ActivityItems, messages, notes, AI summaries, and sync jobs.
 - Slack integration now lists/sends to DMs, syncs selected DMs via `SLACK_SELECTED_DMS`, syncs thread replies, and exposes thread reply sending with an optional thread timestamp.
+- Slack OAuth connect flow added; bot tokens can now be stored encrypted in DB and used by Slack list/sync/send routes when `SLACK_BOT_TOKEN` is not set.
 
 ## Immediate priority
 
@@ -88,8 +89,8 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 
 ### Slack integration
 
-- [ ] Add Slack OAuth flow.
-- [ ] Store Slack tokens encrypted.
+- [x] Add Slack OAuth flow.
+- [x] Store Slack tokens encrypted.
 - [x] Fetch workspace/user info.
 - [x] List Slack channels.
 - [x] Allow selected channels only.
