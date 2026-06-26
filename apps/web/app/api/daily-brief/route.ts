@@ -12,15 +12,17 @@ export async function GET() {
   const cached = await loadCachedBrief();
 
   if (cached) {
-    return Response.json({ brief: cached.content, provider: cached.provider, cached: true, items: topImportantItems(items) });
+    const metadata = isRecord(cached.metadata) ? cached.metadata : {};
+    return Response.json({ brief: cached.content, provider: cached.provider, model: typeof metadata.model === "string" ? metadata.model : undefined, cached: true, items: topImportantItems(items) });
   }
 
   return Response.json({ brief: fallbackBrief(items), provider: "heuristic", cached: false, items: topImportantItems(items) });
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  const input = toGenerateBriefInput(await request.json().catch(() => null));
   const items = await loadActivityItems();
-  const provider = createAiProvider();
+  const provider = createAiProvider(input.provider, input.model);
 
   if (!provider) {
     const brief = fallbackBrief(items);
@@ -30,8 +32,8 @@ export async function POST() {
 
   try {
     const brief = await provider.summarize(buildDailyBriefPrompt(items));
-    await saveBrief(brief, provider.name, { itemCount: items.length });
-    return Response.json({ brief, provider: provider.name, cached: false });
+    await saveBrief(brief, provider.name, { itemCount: items.length, model: input.model });
+    return Response.json({ brief, provider: provider.name, model: input.model, cached: false });
   } catch (error) {
     const brief = fallbackBrief(items);
     await saveBrief(brief, "heuristic", { reason: error instanceof Error ? error.message : "ai_failed" });
@@ -75,6 +77,14 @@ async function saveBrief(content: string, provider: string, metadata: Record<str
   } catch {
     // Summary generation should not fail the UI just because cache persistence failed.
   }
+}
+
+function toGenerateBriefInput(value: unknown) {
+  if (!isRecord(value)) return {};
+
+  const provider = typeof value.provider === "string" && ["openai", "anthropic", "ollama"].includes(value.provider) ? value.provider : undefined;
+  const model = typeof value.model === "string" && value.model.trim() ? value.model.trim().slice(0, 100) : undefined;
+  return { provider, model };
 }
 
 function buildDailyBriefPrompt(items: ActivityItem[]) {

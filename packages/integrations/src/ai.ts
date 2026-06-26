@@ -5,19 +5,19 @@ export type AiProvider = {
   summarize(prompt: string): Promise<string>;
 };
 
-export function createAiProvider(name = process.env.AI_PROVIDER): AiProvider | null {
-  if (name === "openai" && process.env.OPENAI_API_KEY) return openAiProvider();
-  if (name === "anthropic" && process.env.ANTHROPIC_API_KEY) return anthropicProvider();
-  if (name === "ollama" && process.env.OLLAMA_BASE_URL) return ollamaProvider();
+export function createAiProvider(name = process.env.AI_PROVIDER, model?: string): AiProvider | null {
+  if (name === "openai" && process.env.OPENAI_API_KEY) return openAiProvider(model);
+  if (name === "anthropic" && process.env.ANTHROPIC_API_KEY) return anthropicProvider(model);
+  if (name === "ollama" && process.env.OLLAMA_BASE_URL) return ollamaProvider(model);
 
-  if (process.env.OPENAI_API_KEY) return openAiProvider();
-  if (process.env.ANTHROPIC_API_KEY) return anthropicProvider();
-  if (process.env.OLLAMA_BASE_URL) return ollamaProvider();
+  if (process.env.OPENAI_API_KEY) return openAiProvider(model);
+  if (process.env.ANTHROPIC_API_KEY) return anthropicProvider(model);
+  if (process.env.OLLAMA_BASE_URL) return ollamaProvider(model);
 
   return null;
 }
 
-function openAiProvider(): AiProvider {
+function openAiProvider(model?: string): AiProvider {
   return {
     name: "openai",
     async summarize(prompt) {
@@ -28,7 +28,7 @@ function openAiProvider(): AiProvider {
           authorization: `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+          model: model ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini",
           messages: [
             { role: "system", content: "You write concise daily work briefs. Focus on urgent actions, blockers, and order of operations." },
             { role: "user", content: prompt }
@@ -44,7 +44,7 @@ function openAiProvider(): AiProvider {
   };
 }
 
-function anthropicProvider(): AiProvider {
+function anthropicProvider(model?: string): AiProvider {
   return {
     name: "anthropic",
     async summarize(prompt) {
@@ -56,7 +56,7 @@ function anthropicProvider(): AiProvider {
           "anthropic-version": "2023-06-01"
         },
         body: JSON.stringify({
-          model: process.env.ANTHROPIC_MODEL ?? "claude-3-5-haiku-latest",
+          model: model ?? process.env.ANTHROPIC_MODEL ?? "claude-3-5-haiku-latest",
           max_tokens: 700,
           system: "You write concise daily work briefs. Focus on urgent actions, blockers, and order of operations.",
           messages: [{ role: "user", content: prompt }]
@@ -70,7 +70,7 @@ function anthropicProvider(): AiProvider {
   };
 }
 
-function ollamaProvider(): AiProvider {
+function ollamaProvider(model?: string): AiProvider {
   return {
     name: "ollama",
     async summarize(prompt) {
@@ -81,7 +81,7 @@ function ollamaProvider(): AiProvider {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          model: process.env.OLLAMA_MODEL ?? "llama3.1",
+          model: model ?? process.env.OLLAMA_MODEL ?? "llama3.1",
           stream: false,
           messages: [
             { role: "system", content: "You write concise daily work briefs. Focus on urgent actions, blockers, and order of operations." },

@@ -52,6 +52,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Activity feeds now load ActivityItems in pages with a Load More button and server-side action queue filtering.
 - GitHub PR sync now extracts Jira issue keys from PR titles, stores them in ActivityItem metadata, and shows Jira key badges in the GitHub panel.
 - Next.js route/global error boundaries added with retry/home recovery UI and scrubbed error display.
+- Daily Brief generation now supports AI provider/model selection overrides from the UI and stores the chosen model in summary metadata.
 
 ## Immediate priority
 
@@ -175,7 +176,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Add OpenAI provider.
 - [x] Add Anthropic provider.
 - [x] Add Ollama provider via base URL.
-- [ ] Add model selection.
+- [x] Add model selection.
 - [ ] Add async summary jobs.
 - [x] Cache summaries.
 - [x] Generate Daily Brief.
