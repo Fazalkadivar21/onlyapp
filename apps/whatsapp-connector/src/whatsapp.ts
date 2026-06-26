@@ -29,6 +29,7 @@ type SendTextInput = {
   to: string;
   text: string;
   quotedMessageId?: string;
+  mentionJids?: string[];
 };
 
 type SendMediaInput = {
@@ -39,6 +40,7 @@ type SendMediaInput = {
   fileName?: string;
   mimeType?: string;
   quotedMessageId?: string;
+  mentionJids?: string[];
 };
 
 type MediaInfo = {
@@ -196,7 +198,8 @@ export async function sendWhatsAppText(input: SendTextInput) {
   }
 
   const quoted = input.quotedMessageId ? recentMessages.get(input.quotedMessageId) : undefined;
-  const result = await connectedSocket.sendMessage(input.to, { text: input.text }, quoted ? { quoted } : undefined);
+  const mentions = cleanMentionJids(input.mentionJids);
+  const result = await connectedSocket.sendMessage(input.to, { text: input.text, mentions }, quoted ? { quoted } : undefined);
   return { id: result?.key.id ?? null, to: input.to, quoted: input.quotedMessageId ? Boolean(quoted) : false };
 }
 
@@ -208,11 +211,12 @@ export async function sendWhatsAppMedia(input: SendMediaInput) {
   }
 
   const media = { url: input.mediaUrl };
+  const mentions = cleanMentionJids(input.mentionJids);
   const message =
-    input.mediaType === "image" ? { image: media, caption: input.caption } :
-    input.mediaType === "video" ? { video: media, caption: input.caption } :
+    input.mediaType === "image" ? { image: media, caption: input.caption, mentions } :
+    input.mediaType === "video" ? { video: media, caption: input.caption, mentions } :
     input.mediaType === "audio" ? { audio: media, mimetype: input.mimeType } :
-    { document: media, fileName: input.fileName ?? "file", mimetype: input.mimeType ?? "application/octet-stream", caption: input.caption };
+    { document: media, fileName: input.fileName ?? "file", mimetype: input.mimeType ?? "application/octet-stream", caption: input.caption, mentions };
 
   const quoted = input.quotedMessageId ? recentMessages.get(input.quotedMessageId) : undefined;
   const result = await connectedSocket.sendMessage(input.to, message, quoted ? { quoted } : undefined);
@@ -268,6 +272,10 @@ async function forwardIncomingMessage(message: WAMessage) {
   if (!response.ok) {
     throw new Error(`Failed to forward WhatsApp message: ${response.status}`);
   }
+}
+
+function cleanMentionJids(value: string[] | undefined) {
+  return [...new Set((value ?? []).map((jid) => jid.trim()).filter((jid) => jid.endsWith("@s.whatsapp.net") || jid.endsWith("@lid")))];
 }
 
 function rememberRecentMessage(messageId: string, message: WAMessage) {

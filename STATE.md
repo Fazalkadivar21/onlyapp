@@ -54,6 +54,7 @@ Implemented:
 - Jira issue sync now updates existing Jira ActivityItems on re-sync and emits separate `issue_status_change` ActivityItems when a previously synced issue changes status.
 - GitHub webhook route exists at `/api/integrations/github/webhook`. It optionally verifies `GITHUB_WEBHOOK_SECRET`, dedupes by source/sourceId, and normalizes pull request, PR comment, PR review, and failed check webhook events into ActivityItems.
 - WhatsApp quote reply support is wired end-to-end for recently received selected-chat messages: incoming message IDs are cached in the connector, Inbox detail exposes “Reply quoting message”, and web `/api/messages/whatsapp` forwards `quotedMessageId` to connector `/send`.
+- WhatsApp group mention support is wired for v0.1 smoke testing: the composer accepts comma-separated member JIDs, web `/api/messages/whatsapp` forwards `mentionJids`, and connector `/send` passes them to Baileys for text/image/video/document sends.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
 - DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, note links, AI summary cache lookups, and sync job health queries.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
@@ -137,6 +138,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Jira status-change tracking — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding GitHub webhook handling — passed.
 - Re-ran `pnpm --filter @mark-1/whatsapp-connector typecheck`, `pnpm --filter @mark-1/web typecheck`, then root `pnpm typecheck && pnpm build && pnpm lint` after WhatsApp quote reply wiring — passed.
+- Re-ran `pnpm --filter @mark-1/whatsapp-connector typecheck`, `pnpm --filter @mark-1/web typecheck`, then root `pnpm typecheck && pnpm build && pnpm lint` after WhatsApp group mention wiring — passed.
 
 Notes:
 
@@ -160,7 +162,7 @@ Notes:
 
 ## Next agent should do
 
-1. Smoke-test WhatsApp quote reply against a live selected chat; quoted sends require the connector to have seen the incoming message in its recent in-memory cache.
+1. Smoke-test WhatsApp quote reply and group mentions against live selected chats/groups; quoted sends require the connector to have seen the incoming message in its recent in-memory cache, and group mentions require real participant JIDs.
 2. Validate WhatsApp session survives connector restart locally and then on Railway with `WHATSAPP_SESSION_BACKUP_FILE` on durable storage.
 3. Smoke-test Slack OAuth and DB-backed selected channel/DM toggles against a real Slack app.
 4. Smoke-test GitHub PR activity search qualifiers with a real token/repo set.

@@ -31,6 +31,7 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState<MediaType>("image");
   const [fileName, setFileName] = useState("");
+  const [mentionJids, setMentionJids] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>();
   const [quotedMessageId, setQuotedMessageId] = useState<string>();
@@ -92,8 +93,9 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
     if (!to || (!trimmed && !trimmedMediaUrl)) return;
 
     const localId = crypto.randomUUID();
+    const mentions = mentionJids.split(",").map((jid) => jid.trim()).filter(Boolean);
     const label = trimmedMediaUrl ? `${trimmed || `[${mediaType}]`} · ${trimmedMediaUrl}` : trimmed;
-    setSends((current) => [{ id: localId, to, text: label, status: "pending" }, ...current]);
+    setSends((current) => [{ id: localId, to, text: mentions.length > 0 ? `${label} · ${mentions.length} mention(s)` : label, status: "pending" }, ...current]);
     const quoteId = quotedMessageId;
     setText("");
     setMediaUrl("");
@@ -105,8 +107,8 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
           trimmedMediaUrl
-            ? { to, mediaUrl: trimmedMediaUrl, mediaType, caption: trimmed || undefined, fileName: fileName.trim() || undefined, quotedMessageId: quoteId }
-            : { to, text: trimmed, quotedMessageId: quoteId }
+            ? { to, mediaUrl: trimmedMediaUrl, mediaType, caption: trimmed || undefined, fileName: fileName.trim() || undefined, quotedMessageId: quoteId, mentionJids: mentions }
+            : { to, text: trimmed, quotedMessageId: quoteId, mentionJids: mentions }
         )
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
@@ -164,6 +166,13 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
         <input value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} placeholder="Optional media URL, or upload a file below…" className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-400" />
         <input value={fileName} onChange={(event) => setFileName(event.target.value)} placeholder="File name" className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-400" disabled={mediaType !== "document"} />
       </div>
+
+      <input
+        value={mentionJids}
+        onChange={(event) => setMentionJids(event.target.value)}
+        placeholder="Optional group mentions: comma-separated member JIDs like 15551234567@s.whatsapp.net"
+        className="mt-3 w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-zinc-400"
+      />
 
       <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
         <input

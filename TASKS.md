@@ -60,6 +60,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Jira sync now updates existing issue ActivityItems and creates separate `issue_status_change` ActivityItems when a synced issue status changes.
 - GitHub webhook endpoint added for pull request, PR comment, PR review, and failed check events, with optional HMAC signature verification.
 - WhatsApp quote reply is wired for recently received selected-chat messages via `quotedMessageId` from Inbox detail to connector send.
+- WhatsApp group mention wiring added for text/media sends via optional `mentionJids`.
 
 ## Immediate priority
 
@@ -139,7 +140,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Upload media to Cloudinary.
 - [x] Send images/videos/files.
 - [x] Implement quote reply if supported for recently received messages.
-- [ ] Implement group mentions if reliable.
+- [x] Implement group mentions if reliable enough for v0.1 smoke testing.
 - [x] Search synced WhatsApp messages.
 
 ### GitHub integration

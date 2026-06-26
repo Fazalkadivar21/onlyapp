@@ -17,6 +17,7 @@ type WhatsAppSendBody = {
   fileName?: string;
   mimeType?: string;
   quotedMessageId?: string;
+  mentionJids?: string[];
 };
 
 export async function POST(request: Request) {
@@ -34,7 +35,9 @@ export async function POST(request: Request) {
   const dbMessageId = await createPendingMessage(
     body.to,
     messageBody,
-    body.mediaUrl ? { mediaUrl: body.mediaUrl, mediaType: body.mediaType, fileName: body.fileName, mimeType: body.mimeType, quotedMessageId: body.quotedMessageId } : { quotedMessageId: body.quotedMessageId }
+    body.mediaUrl
+      ? { mediaUrl: body.mediaUrl, mediaType: body.mediaType, fileName: body.fileName, mimeType: body.mimeType, quotedMessageId: body.quotedMessageId, mentionJids: body.mentionJids?.join(",") }
+      : { quotedMessageId: body.quotedMessageId, mentionJids: body.mentionJids?.join(",") }
   );
 
   try {
@@ -46,8 +49,8 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify(
         body.mediaUrl
-          ? { to: body.to, mediaUrl: body.mediaUrl, mediaType: body.mediaType, caption: body.caption, fileName: body.fileName, mimeType: body.mimeType, quotedMessageId: body.quotedMessageId }
-          : { to: body.to, text: body.text, quotedMessageId: body.quotedMessageId }
+          ? { to: body.to, mediaUrl: body.mediaUrl, mediaType: body.mediaType, caption: body.caption, fileName: body.fileName, mimeType: body.mimeType, quotedMessageId: body.quotedMessageId, mentionJids: body.mentionJids }
+          : { to: body.to, text: body.text, quotedMessageId: body.quotedMessageId, mentionJids: body.mentionJids }
       )
     });
 
@@ -108,6 +111,7 @@ function isSendBody(value: unknown): value is WhatsAppSendBody {
     (value.caption === undefined || typeof value.caption === "string") &&
     (value.fileName === undefined || typeof value.fileName === "string") &&
     (value.mimeType === undefined || typeof value.mimeType === "string") &&
-    (value.quotedMessageId === undefined || typeof value.quotedMessageId === "string")
+    (value.quotedMessageId === undefined || typeof value.quotedMessageId === "string") &&
+    (value.mentionJids === undefined || (Array.isArray(value.mentionJids) && value.mentionJids.every((jid) => typeof jid === "string")))
   );
 }
