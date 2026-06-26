@@ -45,6 +45,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Slack integration now lists/sends to DMs, syncs selected DMs via `SLACK_SELECTED_DMS`, syncs thread replies, and exposes thread reply sending with an optional thread timestamp.
 - Slack OAuth connect flow added; bot tokens can now be stored encrypted in DB and used by Slack list/sync/send routes when `SLACK_BOT_TOKEN` is not set.
 - Slack selected channels/DMs can now be toggled in the Integrations UI and persisted in integration metadata, while env selections remain supported.
+- GitHub PR panel/sync now includes created PRs, review requests, mentions, merged PRs, and failing-check PRs as distinct ActivityItems.
 
 ## Immediate priority
 
@@ -131,10 +132,10 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Add GitHub auth.
 - [ ] Fetch authenticated user.
 - [x] Fetch PRs created by user.
-- [ ] Fetch PRs needing review.
-- [ ] Fetch comments mentioning user.
-- [ ] Fetch merged PRs.
-- [ ] Fetch failed checks.
+- [x] Fetch PRs needing review.
+- [x] Fetch comments mentioning user.
+- [x] Fetch merged PRs.
+- [x] Fetch failed checks.
 - [ ] Add webhook handling.
 - [x] Store PR events as ActivityItems.
 

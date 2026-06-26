@@ -12,6 +12,7 @@ type GitHubPullRequest = {
   repository: string;
   author: string;
   draft: boolean;
+  kind?: "created" | "review_requested" | "mention" | "merged" | "failed_check";
   updatedAt: string;
 };
 
@@ -70,7 +71,7 @@ export function GitHubIntegrationPanel() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">GitHub PRs</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">Lists open PRs via `GITHUB_TOKEN`; optionally scope with `GITHUB_REPOSITORIES=owner/repo,owner/repo`.</p>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">Lists PRs you created, review requests, mentions, merged PRs, and failing checks via `GITHUB_TOKEN`; optionally scope with `GITHUB_REPOSITORIES=owner/repo,owner/repo`.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs">{configured ? "configured" : "not configured"}</span>
@@ -89,7 +90,7 @@ export function GitHubIntegrationPanel() {
           <a key={pr.id} href={pr.htmlUrl} target="_blank" rel="noreferrer" className="rounded-2xl border border-zinc-100 p-4 transition hover:border-zinc-300">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-medium">{pr.repository}#{pr.number}: {pr.title}</h3>
-              <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">{pr.draft ? "draft" : pr.state}</span>
+              <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">{labelForKind(pr.kind, pr.draft, pr.state)}</span>
             </div>
             <p className="mt-2 text-xs text-zinc-500">By {pr.author} · updated {new Date(pr.updatedAt).toLocaleString()}</p>
           </a>
@@ -97,4 +98,16 @@ export function GitHubIntegrationPanel() {
       </div>
     </article>
   );
+}
+
+function labelForKind(kind: GitHubPullRequest["kind"], draft: boolean, state: string) {
+  if (draft) return "draft";
+  switch (kind) {
+    case "review_requested": return "review requested";
+    case "mention": return "mention";
+    case "merged": return "merged";
+    case "failed_check": return "failed checks";
+    case "created": return "your PR";
+    default: return state;
+  }
 }

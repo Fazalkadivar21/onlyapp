@@ -1,12 +1,12 @@
 import { activityItems, createDb } from "@mark-1/db";
-import { fetchGitHubPullRequests, normalizeGitHubPullRequest } from "@mark-1/integrations";
+import { fetchGitHubPullRequestActivity, normalizeGitHubPullRequest } from "@mark-1/integrations";
 import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const pullRequests = await fetchGitHubPullRequests();
+    const pullRequests = await fetchGitHubPullRequestActivity();
     return Response.json({ configured: true, pullRequests });
   } catch (error) {
     const message = error instanceof Error ? error.message : "github_unavailable";
@@ -20,7 +20,7 @@ export async function POST() {
   }
 
   try {
-    const pullRequests = await fetchGitHubPullRequests();
+    const pullRequests = await fetchGitHubPullRequestActivity();
     const normalized = pullRequests.map(normalizeGitHubPullRequest);
     const db = createDb();
     let created = 0;

@@ -1,4 +1,6 @@
-import type { ActivityItem } from "@mark-1/shared";
+import type { ActivityItem, ActivityPriority } from "@mark-1/shared";
+
+export type GitHubPullRequestKind = "created" | "review_requested" | "mention" | "merged" | "failed_check";
 
 export type GitHubPullRequest = {
   id: number;
@@ -9,6 +11,7 @@ export type GitHubPullRequest = {
   repository: string;
   author: string;
   draft: boolean;
+  kind: GitHubPullRequestKind;
   createdAt: string;
   updatedAt: string;
 };
@@ -50,31 +53,57 @@ export async function fetchGitHubPullRequests(input: { token?: string; repositor
 
   if (repositories.length > 0) {
     const pulls = await Promise.all(repositories.map((repo) => githubFetch<GitHubPull[]>(`/repos/${repo}/pulls?state=open&per_page=${Math.min(limit, 30)}`, token)));
-    return pulls.flat().map(toPullRequestFromPull).slice(0, limit);
+    return pulls.flat().map((pull) => toPullRequestFromPull(pull, "created")).slice(0, limit);
   }
 
   const user = await githubFetch<GitHubUser>("/user", token);
-  const query = encodeURIComponent(`type:pr state:open author:${user.login} archived:false`);
-  const result = await githubFetch<{ items: GitHubSearchIssue[] }>(`/search/issues?q=${query}&sort=updated&order=desc&per_page=${limit}`, token);
-  return result.items.map(toPullRequestFromSearchIssue);
+  return searchGitHubPullRequests({ token, query: `type:pr state:open author:${user.login} archived:false`, kind: "created", limit });
+}
+
+export async function fetchGitHubPullRequestActivity(input: { token?: string; repositories?: string[]; limitPerKind?: number } = {}) {
+  const token = input.token ?? process.env.GITHUB_TOKEN;
+  if (!token) throw new Error("GITHUB_TOKEN is required");
+
+  const user = await githubFetch<GitHubUser>("/user", token);
+  const repoFilter = buildRepoFilter(input.repositories ?? parseRepositories(process.env.GITHUB_REPOSITORIES));
+  const limit = input.limitPerKind ?? 10;
+  const queries: Array<{ kind: GitHubPullRequestKind; query: string }> = [
+    { kind: "created", query: `type:pr state:open author:${user.login} archived:false ${repoFilter}` },
+    { kind: "review_requested", query: `type:pr state:open review-requested:${user.login} archived:false ${repoFilter}` },
+    { kind: "mention", query: `type:pr state:open mentions:${user.login} archived:false ${repoFilter}` },
+    { kind: "merged", query: `type:pr is:merged author:${user.login} archived:false ${repoFilter}` },
+    { kind: "failed_check", query: `type:pr state:open author:${user.login} status:failure archived:false ${repoFilter}` }
+  ];
+
+  const groups = await Promise.all(queries.map(({ query, kind }) => searchGitHubPullRequests({ token, query, kind, limit }).catch(() => [])));
+  const byKey = new Map<string, GitHubPullRequest>();
+
+  for (const pr of groups.flat()) {
+    const key = `${pr.repository}#${pr.number}:${pr.kind}`;
+    byKey.set(key, pr);
+  }
+
+  return Array.from(byKey.values()).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 }
 
 export function normalizeGitHubPullRequest(pr: GitHubPullRequest): Omit<ActivityItem, "id" | "createdAt" | "updatedAt"> {
+  const priority = priorityForKind(pr.kind, pr.draft);
   return {
     source: "github",
-    sourceId: `github_pr_${pr.id}`,
-    type: "pull_request",
-    title: `${pr.repository}#${pr.number}: ${pr.title}`,
-    body: `${pr.author} opened/updated ${pr.draft ? "draft " : ""}PR #${pr.number}.`,
+    sourceId: `github_pr_${pr.kind}_${pr.id}`,
+    type: `pull_request_${pr.kind}`,
+    title: `${labelForKind(pr.kind)}: ${pr.repository}#${pr.number}`,
+    body: `${pr.title} — ${pr.author} ${bodyVerbForKind(pr.kind)} ${pr.draft ? "draft " : ""}PR #${pr.number}.`,
     actorName: pr.author,
     url: pr.htmlUrl,
-    priority: pr.draft ? "low" : "normal",
+    priority,
     status: "unread",
     metadata: {
       repository: pr.repository,
       number: pr.number,
       state: pr.state,
       draft: pr.draft,
+      kind: pr.kind,
       updatedAt: pr.updatedAt
     }
   };
@@ -85,6 +114,16 @@ function parseRepositories(value: string | undefined) {
     .split(",")
     .map((repo) => repo.trim())
     .filter(Boolean);
+}
+
+async function searchGitHubPullRequests(input: { token: string; query: string; kind: GitHubPullRequestKind; limit: number }) {
+  const query = encodeURIComponent(input.query.replace(/\s+/g, " ").trim());
+  const result = await githubFetch<{ items: GitHubSearchIssue[] }>(`/search/issues?q=${query}&sort=updated&order=desc&per_page=${input.limit}`, input.token);
+  return result.items.map((issue) => toPullRequestFromSearchIssue(issue, input.kind));
+}
+
+function buildRepoFilter(repositories: string[]) {
+  return repositories.map((repo) => `repo:${repo}`).join(" ");
 }
 
 async function githubFetch<T>(path: string, token: string): Promise<T> {
@@ -104,7 +143,7 @@ async function githubFetch<T>(path: string, token: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function toPullRequestFromSearchIssue(issue: GitHubSearchIssue): GitHubPullRequest {
+function toPullRequestFromSearchIssue(issue: GitHubSearchIssue, kind: GitHubPullRequestKind): GitHubPullRequest {
   const repository = issue.repository_url.split("/repos/")[1] ?? "unknown/repo";
   return {
     id: issue.id,
@@ -115,12 +154,13 @@ function toPullRequestFromSearchIssue(issue: GitHubSearchIssue): GitHubPullReque
     repository,
     author: issue.user?.login ?? "GitHub",
     draft: Boolean(issue.draft),
+    kind,
     createdAt: issue.created_at,
     updatedAt: issue.updated_at
   };
 }
 
-function toPullRequestFromPull(pull: GitHubPull): GitHubPullRequest {
+function toPullRequestFromPull(pull: GitHubPull, kind: GitHubPullRequestKind): GitHubPullRequest {
   return {
     id: pull.id,
     number: pull.number,
@@ -130,7 +170,34 @@ function toPullRequestFromPull(pull: GitHubPull): GitHubPullRequest {
     repository: pull.base?.repo?.full_name ?? pull.head?.repo?.full_name ?? "unknown/repo",
     author: pull.user?.login ?? "GitHub",
     draft: Boolean(pull.draft),
+    kind,
     createdAt: pull.created_at,
     updatedAt: pull.updated_at
   };
+}
+
+function priorityForKind(kind: GitHubPullRequestKind, draft: boolean): ActivityPriority {
+  if (draft) return "low";
+  if (kind === "review_requested" || kind === "mention" || kind === "failed_check") return "high";
+  return "normal";
+}
+
+function labelForKind(kind: GitHubPullRequestKind) {
+  switch (kind) {
+    case "review_requested": return "Review requested";
+    case "mention": return "Mention";
+    case "merged": return "Merged PR";
+    case "failed_check": return "Failed checks";
+    case "created": return "Your PR";
+  }
+}
+
+function bodyVerbForKind(kind: GitHubPullRequestKind) {
+  switch (kind) {
+    case "review_requested": return "requested your review on";
+    case "mention": return "mentioned you in";
+    case "merged": return "merged";
+    case "failed_check": return "has failing checks on";
+    case "created": return "opened/updated";
+  }
 }
