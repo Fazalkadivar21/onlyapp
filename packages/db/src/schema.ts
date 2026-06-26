@@ -1,4 +1,4 @@
-import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const activitySource = pgEnum("activity_source", ["slack", "whatsapp", "github", "jira"]);
 export const activityStatus = pgEnum("activity_status", ["unread", "seen", "done", "snoozed"]);
@@ -47,7 +47,13 @@ export const activityItems = pgTable("activity_items", {
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-}, (table) => [index("activity_items_source_idx").on(table.source), index("activity_items_status_idx").on(table.status)]);
+}, (table) => [
+  uniqueIndex("activity_items_source_source_id_idx").on(table.source, table.sourceId),
+  index("activity_items_source_idx").on(table.source),
+  index("activity_items_status_idx").on(table.status),
+  index("activity_items_created_at_idx").on(table.createdAt),
+  index("activity_items_priority_status_idx").on(table.priority, table.status)
+]);
 
 export const messages = pgTable("messages", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -60,7 +66,11 @@ export const messages = pgTable("messages", {
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-});
+}, (table) => [
+  index("messages_source_conversation_idx").on(table.source, table.conversationId),
+  index("messages_status_updated_at_idx").on(table.status, table.updatedAt),
+  index("messages_created_at_idx").on(table.createdAt)
+]);
 
 export const notes = pgTable("notes", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -68,7 +78,7 @@ export const notes = pgTable("notes", {
   content: text("content").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-});
+}, (table) => [index("notes_updated_at_idx").on(table.updatedAt)]);
 
 export const aiSummaries = pgTable("ai_summaries", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -77,7 +87,7 @@ export const aiSummaries = pgTable("ai_summaries", {
   content: text("content").notNull(),
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
-});
+}, (table) => [index("ai_summaries_type_created_at_idx").on(table.type, table.createdAt)]);
 
 export const syncJobs = pgTable("sync_jobs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -87,4 +97,7 @@ export const syncJobs = pgTable("sync_jobs", {
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-});
+}, (table) => [
+  index("sync_jobs_source_status_idx").on(table.source, table.status),
+  index("sync_jobs_updated_at_idx").on(table.updatedAt)
+]);

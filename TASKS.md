@@ -41,6 +41,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Slack can send channel messages through `SLACK_BOT_TOKEN`, with a simple Integrations-page composer and DB outgoing message status when configured.
 - Workspace shell has a basic command palette via ⌘K/Ctrl+K for page navigation.
 - Integrations page has a Sync Health panel backed by `/api/sync-health` for env/config checks, WhatsApp connector health, failed sends, and recent sync jobs.
+- Initial Drizzle migration file generated, including DB indexes for ActivityItems, messages, notes, AI summaries, and sync jobs.
 
 ## Immediate priority
 
@@ -63,6 +64,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Connect to external Postgres.
 - [x] Add initial schema.
 - [x] Add migration scripts.
+- [x] Generate initial migration file.
 - [x] Add Redis/BullMQ queue package/config.
 - [x] Add Cloudinary SDK/config.
 - [x] Add encryption utility for secrets.
@@ -177,7 +179,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Add optimistic sending for WhatsApp text composer.
 - [x] Add skeleton loading.
 - [ ] Add virtualized lists.
-- [ ] Add DB indexes.
+- [x] Add DB indexes.
 - [x] Add command palette.
 - [x] Add keyboard shortcuts.
 - [x] Add retry states.
