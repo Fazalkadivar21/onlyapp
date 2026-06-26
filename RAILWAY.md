@@ -8,6 +8,7 @@ Deploy three Railway services from this monorepo:
 - Build command: `pnpm install --frozen-lockfile && pnpm --filter @mark-1/web build`
 - Start command: `pnpm --filter @mark-1/web start`
 - Healthcheck: `/api/health`
+- GitHub webhook URL: `/api/integrations/github/webhook` with `GITHUB_WEBHOOK_SECRET` configured in GitHub and Railway
 
 ## Worker
 

@@ -58,6 +58,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Inbox Slack ActivityItem detail panel now has inline Slack thread/channel reply sending and AI draft generation.
 - ActivityItem detail panel now has AI summaries via `/api/ai/activity-summary` with heuristic fallback for Slack, WhatsApp, GitHub, and Jira items.
 - Jira sync now updates existing issue ActivityItems and creates separate `issue_status_change` ActivityItems when a synced issue status changes.
+- GitHub webhook endpoint added for pull request, PR comment, PR review, and failed check events, with optional HMAC signature verification.
 
 ## Immediate priority
 
@@ -149,7 +150,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Fetch comments mentioning user.
 - [x] Fetch merged PRs.
 - [x] Fetch failed checks.
-- [ ] Add webhook handling.
+- [x] Add webhook handling.
 - [x] Store PR events as ActivityItems.
 
 ### Jira integration
