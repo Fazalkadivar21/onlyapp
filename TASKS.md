@@ -46,6 +46,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Slack OAuth connect flow added; bot tokens can now be stored encrypted in DB and used by Slack list/sync/send routes when `SLACK_BOT_TOKEN` is not set.
 - Slack selected channels/DMs can now be toggled in the Integrations UI and persisted in integration metadata, while env selections remain supported.
 - GitHub PR panel/sync now includes created PRs, review requests, mentions, merged PRs, and failing-check PRs as distinct ActivityItems.
+- Jira integration panel now shows a sprint progress widget with done/in-progress/todo/blocked/unassigned counts and status breakdown.
 
 ## Immediate priority
 
@@ -149,7 +150,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Track assigned tickets.
 - [ ] Parse ticket keys from GitHub PRs.
 - [ ] Link PRs to Jira tickets.
-- [ ] Build sprint progress widget.
+- [x] Build sprint progress widget.
 - [x] Store Jira events as ActivityItems.
 
 ### Notes

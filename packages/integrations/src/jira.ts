@@ -19,6 +19,17 @@ export type JiraSprint = {
   endDate?: string;
 };
 
+export type JiraSprintProgress = {
+  total: number;
+  done: number;
+  inProgress: number;
+  todo: number;
+  blocked: number;
+  unassigned: number;
+  completionPercent: number;
+  byStatus: Array<{ status: string; count: number }>;
+};
+
 type JiraSprintResponse = { values?: Array<{ id: number; name: string; state: string; startDate?: string; endDate?: string }> };
 type JiraSearchResponse = { issues?: JiraApiIssue[] };
 type JiraApiIssue = {
@@ -51,14 +62,46 @@ export async function fetchJiraActiveSprintIssues(input: { siteUrl?: string; ema
     if (!sprint) return { sprint: undefined, issues: [] };
 
     const issueResponse = await jiraFetch<{ issues?: JiraApiIssue[] }>(siteUrl, `/rest/agile/1.0/sprint/${sprint.id}/issue?maxResults=${limit}`, auth);
-    return { sprint, issues: (issueResponse.issues ?? []).map((issue) => toIssue(siteUrl, issue)) };
+    const issues = (issueResponse.issues ?? []).map((issue) => toIssue(siteUrl, issue));
+    return { sprint, issues, progress: calculateJiraSprintProgress(issues) };
   }
 
   if (!projectKey) throw new Error("JIRA_BOARD_ID or JIRA_PROJECT_KEY is required");
 
   const jql = encodeURIComponent(`project = ${projectKey} AND assignee = currentUser() ORDER BY updated DESC`);
   const issueResponse = await jiraFetch<JiraSearchResponse>(siteUrl, `/rest/api/3/search/jql?jql=${jql}&maxResults=${limit}`, auth);
-  return { sprint: undefined, issues: (issueResponse.issues ?? []).map((issue) => toIssue(siteUrl, issue)) };
+  const issues = (issueResponse.issues ?? []).map((issue) => toIssue(siteUrl, issue));
+  return { sprint: undefined, issues, progress: calculateJiraSprintProgress(issues) };
+}
+
+export function calculateJiraSprintProgress(issues: JiraIssue[]): JiraSprintProgress {
+  const byStatus = new Map<string, number>();
+  let done = 0;
+  let inProgress = 0;
+  let blocked = 0;
+  let unassigned = 0;
+
+  for (const issue of issues) {
+    const status = issue.status || "Unknown";
+    const normalized = status.toLowerCase();
+    byStatus.set(status, (byStatus.get(status) ?? 0) + 1);
+    if (normalized.includes("done") || normalized.includes("closed") || normalized.includes("resolved")) done += 1;
+    else if (normalized.includes("progress") || normalized.includes("review") || normalized.includes("qa")) inProgress += 1;
+    if (normalized.includes("block")) blocked += 1;
+    if (!issue.assignee) unassigned += 1;
+  }
+
+  const total = issues.length;
+  return {
+    total,
+    done,
+    inProgress,
+    todo: Math.max(total - done - inProgress, 0),
+    blocked,
+    unassigned,
+    completionPercent: total === 0 ? 0 : Math.round((done / total) * 100),
+    byStatus: Array.from(byStatus.entries()).map(([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count)
+  };
 }
 
 export function normalizeJiraIssue(issue: JiraIssue): Omit<ActivityItem, "id" | "createdAt" | "updatedAt"> {

@@ -2,7 +2,7 @@ import type { ActivityItem, ActivitySource } from "@mark-1/shared";
 
 export { createAiProvider, type AiProviderName } from "./ai";
 export { fetchGitHubPullRequestActivity, fetchGitHubPullRequests, normalizeGitHubPullRequest, type GitHubPullRequest, type GitHubPullRequestKind } from "./github";
-export { fetchJiraActiveSprintIssues, normalizeJiraIssue, type JiraIssue, type JiraSprint } from "./jira";
+export { calculateJiraSprintProgress, fetchJiraActiveSprintIssues, normalizeJiraIssue, type JiraIssue, type JiraSprint, type JiraSprintProgress } from "./jira";
 export { fetchSlackChannels, fetchSlackDms, fetchSlackSelectedChannelMessages, normalizeSlackMessage, parseSlackSelectedChannels, parseSlackSelectedDms, sendSlackMessage, type SlackChannel, type SlackMessage, type SlackSendResult } from "./slack";
 export { deleteMedia, configureCloudinary, getCloudinaryConfig, uploadMedia, type CloudinaryConfig, type UploadMediaInput } from "./media";
 export { decryptSecret, encryptSecret, type EncryptedSecret } from "./secrets";

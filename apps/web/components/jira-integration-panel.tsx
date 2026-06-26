@@ -18,11 +18,25 @@ type JiraSprint = {
   id: number;
   name: string;
   state: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+type JiraSprintProgress = {
+  total: number;
+  done: number;
+  inProgress: number;
+  todo: number;
+  blocked: number;
+  unassigned: number;
+  completionPercent: number;
+  byStatus: Array<{ status: string; count: number }>;
 };
 
 type JiraResponse = {
   configured?: boolean;
   sprint?: JiraSprint;
+  progress?: JiraSprintProgress;
   issues: JiraIssue[];
   error?: string;
 };
@@ -30,6 +44,7 @@ type JiraResponse = {
 export function JiraIntegrationPanel() {
   const [issues, setIssues] = useState<JiraIssue[]>([]);
   const [sprint, setSprint] = useState<JiraSprint>();
+  const [progress, setProgress] = useState<JiraSprintProgress>();
   const [configured, setConfigured] = useState(false);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
@@ -44,10 +59,12 @@ export function JiraIntegrationPanel() {
       const payload = (await response.json()) as JiraResponse;
       setConfigured(Boolean(payload.configured));
       setSprint(payload.sprint);
+      setProgress(payload.progress);
       setIssues(payload.issues ?? []);
       setError(payload.error);
     } catch (error) {
       setIssues([]);
+      setProgress(undefined);
       setError(error instanceof Error ? error.message : "request_failed");
     } finally {
       setLoading(false);
@@ -79,7 +96,7 @@ export function JiraIntegrationPanel() {
         <div>
           <h2 className="text-xl font-semibold">Jira Sprint / Issues</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-600">Uses `JIRA_BOARD_ID` for active sprint issues, or `JIRA_PROJECT_KEY` for assigned issues.</p>
-          {sprint ? <p className="mt-1 text-sm font-medium text-zinc-700">Active sprint: {sprint.name}</p> : null}
+          {sprint ? <p className="mt-1 text-sm font-medium text-zinc-700">Active sprint: {sprint.name}{sprint.endDate ? ` · ends ${new Date(sprint.endDate).toLocaleDateString()}` : ""}</p> : null}
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs">{configured ? "configured" : "not configured"}</span>
@@ -90,6 +107,28 @@ export function JiraIntegrationPanel() {
 
       {error ? <div className="mt-4"><ErrorNotice title="Jira unavailable" message={error} action={<button onClick={loadIssues} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /></div> : null}
       {syncResult ? <p className="mt-4 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">{syncResult}</p> : null}
+
+      {progress ? (
+        <div className="mt-5 rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-900">Sprint progress</p>
+              <p className="mt-1 text-xs text-zinc-500">{progress.done}/{progress.total} done · {progress.inProgress} in progress · {progress.blocked} blocked</p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold">{progress.completionPercent}%</span>
+          </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-200">
+            <div className="h-full rounded-full bg-black" style={{ width: `${progress.completionPercent}%` }} />
+          </div>
+          <div className="mt-4 grid gap-2 text-xs text-zinc-600 sm:grid-cols-4">
+            <span className="rounded-xl bg-white px-3 py-2">Todo: {progress.todo}</span>
+            <span className="rounded-xl bg-white px-3 py-2">In progress: {progress.inProgress}</span>
+            <span className="rounded-xl bg-white px-3 py-2">Done: {progress.done}</span>
+            <span className="rounded-xl bg-white px-3 py-2">Unassigned: {progress.unassigned}</span>
+          </div>
+          {progress.byStatus.length > 0 ? <p className="mt-3 text-xs text-zinc-500">Statuses: {progress.byStatus.map((entry) => `${entry.status} ${entry.count}`).join(" · ")}</p> : null}
+        </div>
+      ) : null}
 
       <div className="mt-5 grid gap-3">
         {loading ? <LoadingCards count={3} /> : null}
