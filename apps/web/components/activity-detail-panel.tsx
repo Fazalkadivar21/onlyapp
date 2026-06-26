@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ActivityItem, ActivityStatus } from "@mark-1/shared";
 import { PriorityBadge, SourceBadge, StatusBadge } from "./badges";
 
@@ -12,9 +12,18 @@ type ReplyTarget = {
 export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNote }: { item?: ActivityItem; onReply: (target: ReplyTarget) => void; onStatusChange: (status: ActivityStatus) => void; onCreateNote: (item: ActivityItem) => void }) {
   const [drafting, setDrafting] = useState(false);
   const [draftError, setDraftError] = useState<string>();
+  const [slackDraft, setSlackDraft] = useState("");
+  const [slackSending, setSlackSending] = useState(false);
+  const [slackResult, setSlackResult] = useState<string>();
 
-  async function draftReply(target: ReplyTarget) {
-    if (!item) return;
+  useEffect(() => {
+    setSlackDraft("");
+    setSlackResult(undefined);
+    setDraftError(undefined);
+  }, [item?.id]);
+
+  async function generateReplyDraft() {
+    if (!item) return undefined;
     setDrafting(true);
     setDraftError(undefined);
 
@@ -26,11 +35,34 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
       });
       const payload = (await response.json()) as { draft?: string; error?: string };
       if (!response.ok) throw new Error(payload.error ?? "draft_failed");
-      onReply({ ...target, draft: payload.draft ?? target.draft });
+      return payload.draft;
     } catch (error) {
       setDraftError(error instanceof Error ? error.message : "draft_failed");
+      return undefined;
     } finally {
       setDrafting(false);
+    }
+  }
+
+  async function sendSlackReply(channelId: string, threadTs?: string) {
+    if (!slackDraft.trim()) return;
+    setSlackSending(true);
+    setSlackResult(undefined);
+
+    try {
+      const response = await fetch("/api/messages/slack", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ channelId, threadTs, text: slackDraft.trim() })
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "slack_send_failed");
+      setSlackDraft("");
+      setSlackResult("Slack reply sent.");
+    } catch (error) {
+      setSlackResult(error instanceof Error ? error.message : "slack_send_failed");
+    } finally {
+      setSlackSending(false);
     }
   }
 
@@ -43,6 +75,8 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
   }
 
   const whatsappChatId = item.source === "whatsapp" ? stringMetadata(item.metadata, "chatId") : undefined;
+  const slackChannelId = item.source === "slack" ? stringMetadata(item.metadata, "channelId") : undefined;
+  const slackThreadTs = item.source === "slack" ? (stringMetadata(item.metadata, "threadTs") ?? stringMetadata(item.metadata, "ts")) : undefined;
 
   return (
     <aside className="sticky top-5 rounded-3xl bg-white p-6 shadow-sm">
@@ -97,7 +131,10 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
             </button>
             <button
               type="button"
-              onClick={() => void draftReply({ chatId: whatsappChatId, draft: `Re: ${item.actorName} — ` })}
+              onClick={async () => {
+                const draft = await generateReplyDraft();
+                onReply({ chatId: whatsappChatId, draft: draft ?? `Re: ${item.actorName} — ` });
+              }}
               disabled={drafting}
               className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium disabled:opacity-50"
             >
@@ -105,11 +142,44 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
             </button>
             {draftError ? <p className="text-xs text-amber-700">Draft failed: {draftError}</p> : null}
           </div>
-        ) : (
+        ) : null}
+        {slackChannelId ? (
+          <div className="grid gap-2 rounded-2xl border border-zinc-100 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Slack reply</p>
+            <textarea
+              value={slackDraft}
+              onChange={(event) => setSlackDraft(event.target.value)}
+              placeholder="Write a Slack reply…"
+              rows={3}
+              className="w-full resize-none rounded-2xl border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={async () => setSlackDraft((await generateReplyDraft()) ?? "")}
+                disabled={drafting}
+                className="rounded-2xl border border-zinc-200 px-3 py-2 text-xs font-medium disabled:opacity-50"
+              >
+                {drafting ? "Drafting…" : "AI draft"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendSlackReply(slackChannelId, slackThreadTs)}
+                disabled={slackSending || !slackDraft.trim()}
+                className="rounded-2xl bg-black px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+              >
+                {slackSending ? "Sending…" : "Send"}
+              </button>
+            </div>
+            {slackResult ? <p className="text-xs text-zinc-500">{slackResult}</p> : null}
+            {draftError ? <p className="text-xs text-amber-700">Draft failed: {draftError}</p> : null}
+          </div>
+        ) : null}
+        {!whatsappChatId && !slackChannelId ? (
           <button type="button" disabled className="rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-400">
             Reply action not wired for {item.source}
           </button>
-        )}
+        ) : null}
         <button type="button" onClick={() => onCreateNote(item)} className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium">Create linked note</button>
         {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="rounded-2xl border border-zinc-200 px-4 py-3 text-center text-sm font-medium">Open source</a> : null}
       </div>
