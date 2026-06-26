@@ -16,6 +16,18 @@ export function InboxExplorer() {
   const [replyTarget, setReplyTarget] = useState<{ chatId: string; draft?: string; nonce: number } | undefined>();
   const filter = activeFilter === "all" ? {} : { sources: [activeFilter] };
 
+  async function createLinkedNote(item: ActivityItem) {
+    const response = await fetch("/api/notes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ activityItemId: item.id })
+    });
+
+    if (response.ok) {
+      window.location.href = "/notes";
+    }
+  }
+
   async function updateSelectedStatus(status: ActivityStatus) {
     if (!selectedItem) return;
 
@@ -59,6 +71,7 @@ export function InboxExplorer() {
           item={selectedItem}
           onReply={(target) => setReplyTarget({ ...target, nonce: Date.now() })}
           onStatusChange={(status) => void updateSelectedStatus(status)}
+          onCreateNote={(item) => void createLinkedNote(item)}
         />
       </div>
     </div>

@@ -80,6 +80,17 @@ export const notes = pgTable("notes", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [index("notes_updated_at_idx").on(table.updatedAt)]);
 
+export const noteLinks = pgTable("note_links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  noteId: uuid("note_id").notNull().references(() => notes.id),
+  activityItemId: uuid("activity_item_id").notNull().references(() => activityItems.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [
+  index("note_links_note_idx").on(table.noteId),
+  index("note_links_activity_item_idx").on(table.activityItemId),
+  uniqueIndex("note_links_note_activity_item_idx").on(table.noteId, table.activityItemId)
+]);
+
 export const aiSummaries = pgTable("ai_summaries", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: text("type").notNull(),

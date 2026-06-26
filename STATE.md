@@ -33,7 +33,7 @@ Implemented:
 - WhatsApp send API persists outgoing message status to `messages` when `DATABASE_URL` is configured and still works as connector-only send without DB.
 - Unified Inbox has an ActivityItem detail panel. Selecting an item shows source/status/body metadata; WhatsApp items expose a reply action that prefills the composer with the source chat ID.
 - ActivityItem detail panel supports seen/done/snoozed status actions. Updates are optimistic in the UI and persist through `PATCH /api/activity-items` when `DATABASE_URL` is configured.
-- Notes page now has a lightweight notes workspace with list/create/select/edit and debounced autosave via `/api/notes`. It uses a mock local note fallback without `DATABASE_URL`.
+- Notes page now has a lightweight notes workspace with list/create/select/edit and debounced autosave via `/api/notes`. It uses a mock local note fallback without `DATABASE_URL`. Inbox ActivityItem detail can create a prefilled linked note; DB mode persists the relationship in `note_links`.
 - AI provider abstraction exists in `packages/integrations` for OpenAI, Anthropic, and Ollama-compatible `/api/chat` endpoints.
 - Daily Brief page uses `/api/daily-brief`; it reads cached ActivityItems, generates/caches DB summaries in `ai_summaries`, and falls back to a heuristic brief when no AI provider is configured or AI fails.
 - GitHub integration skeleton exists: `packages/integrations/src/github.ts` fetches PR activity using `GITHUB_TOKEN` and optional `GITHUB_REPOSITORIES`: PRs created by user, PRs needing review, PRs/comments mentioning user, merged PRs, and open PRs with failing checks. `/api/integrations/github/prs` lists these and can sync them into distinct normalized ActivityItems; Integrations page has a GitHub PR panel.
@@ -43,7 +43,7 @@ Implemented:
 - Workspace shell includes a client command palette opened with ⌘K/Ctrl+K for quick page navigation.
 - Activity feeds and integration panels now show skeleton loading cards plus retryable error notices for failed fetches.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
-- DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, AI summary cache lookups, and sync job health queries.
+- DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, note links, AI summary cache lookups, and sync job health queries.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
 - WhatsApp media sending exists: web `/api/messages/whatsapp`, the inbox composer, and connector `/send` accept media URLs for image/video/document/audio sends with optional caption/file name.
 - WhatsApp composer now supports local file upload: `/api/media/upload` accepts multipart files up to 25MB, uploads them to Cloudinary, infers media type, and fills the media send fields.
@@ -111,6 +111,8 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after Slack DB-backed selected channel/DM toggles — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after expanding GitHub PR activity sync — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Jira sprint progress widget — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
+- Ran `pnpm db:generate` after adding `note_links` — passed and generated `packages/db/drizzle/0001_fancy_leopardon.sql`.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after ActivityItem linked-note creation — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
 
 Notes:
 
@@ -138,7 +140,7 @@ Notes:
 2. Smoke-test Slack OAuth and DB-backed selected channel/DM toggles against a real Slack app.
 3. Smoke-test GitHub PR activity search qualifiers with a real token/repo set.
 4. Smoke-test Jira sprint progress/status grouping with a real Jira board.
-5. Apply DB migration once `DATABASE_URL` target is confirmed.
+5. Apply DB migrations once `DATABASE_URL` target is confirmed, including `note_links`.
 6. Add virtualized lists or pagination once feeds/chats are large enough to need it.
 
 ## Known blockers / missing information

@@ -1,4 +1,4 @@
-import { createDb, notes } from "@mark-1/db";
+import { activityItems, createDb, noteLinks, notes } from "@mark-1/db";
 import { desc, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -34,11 +34,29 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const title = isRecord(body) && typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Untitled";
-  const content = isRecord(body) && typeof body.content === "string" ? body.content : "";
-
   const db = createDb();
+  const activityItemId = isRecord(body) && typeof body.activityItemId === "string" ? body.activityItemId : undefined;
+  const activityItem = activityItemId
+    ? (await db.select().from(activityItems).where(eq(activityItems.id, activityItemId)).limit(1))[0]
+    : undefined;
+
+  if (activityItemId && !activityItem) return Response.json({ error: "Activity item not found" }, { status: 404 });
+
+  const title = isRecord(body) && typeof body.title === "string" && body.title.trim()
+    ? body.title.trim()
+    : activityItem
+      ? `Note: ${activityItem.title}`
+      : "Untitled";
+  const content = isRecord(body) && typeof body.content === "string"
+    ? body.content
+    : activityItem
+      ? formatActivityItemNote(activityItem)
+      : "";
+
   const [note] = await db.insert(notes).values({ title, content }).returning();
+  if (note && activityItem) {
+    await db.insert(noteLinks).values({ noteId: note.id, activityItemId: activityItem.id }).onConflictDoNothing();
+  }
   return Response.json({ note }, { status: 201 });
 }
 
@@ -65,4 +83,23 @@ export async function PATCH(request: Request) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatActivityItemNote(item: typeof activityItems.$inferSelect) {
+  const lines = [
+    `# ${item.title}`,
+    "",
+    `Source: ${item.source}`,
+    `Actor: ${item.actorName}`,
+    `Status: ${item.status}`,
+    `Priority: ${item.priority}`,
+    item.url ? `URL: ${item.url}` : undefined,
+    "",
+    item.body,
+    "",
+    "## Follow-ups",
+    "- "
+  ];
+
+  return lines.filter((line): line is string => line !== undefined).join("\n");
 }

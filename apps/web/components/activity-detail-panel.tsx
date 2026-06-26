@@ -8,7 +8,7 @@ type ReplyTarget = {
   draft?: string;
 };
 
-export function ActivityDetailPanel({ item, onReply, onStatusChange }: { item?: ActivityItem; onReply: (target: ReplyTarget) => void; onStatusChange: (status: ActivityStatus) => void }) {
+export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNote }: { item?: ActivityItem; onReply: (target: ReplyTarget) => void; onStatusChange: (status: ActivityStatus) => void; onCreateNote: (item: ActivityItem) => void }) {
   if (!item) {
     return (
       <aside className="rounded-3xl border border-dashed border-zinc-300 bg-white/70 p-6 text-sm text-zinc-500">
@@ -74,6 +74,7 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange }: { item?: 
             Reply action not wired for {item.source}
           </button>
         )}
+        <button type="button" onClick={() => onCreateNote(item)} className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium">Create linked note</button>
         {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="rounded-2xl border border-zinc-200 px-4 py-3 text-center text-sm font-medium">Open source</a> : null}
       </div>
     </aside>

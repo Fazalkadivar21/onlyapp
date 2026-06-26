@@ -47,6 +47,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Slack selected channels/DMs can now be toggled in the Integrations UI and persisted in integration metadata, while env selections remain supported.
 - GitHub PR panel/sync now includes created PRs, review requests, mentions, merged PRs, and failing-check PRs as distinct ActivityItems.
 - Jira integration panel now shows a sprint progress widget with done/in-progress/todo/blocked/unassigned counts and status breakdown.
+- Notes can now be created from ActivityItems via the inbox detail panel, with `note_links` persisted in DB.
 
 ## Immediate priority
 
@@ -161,8 +162,8 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [ ] Add headings/lists/checklists.
 - [ ] Add basic tables.
 - [x] Add autosave.
-- [ ] Link notes to ActivityItems.
-- [ ] Add create-note-from-item action.
+- [x] Link notes to ActivityItems.
+- [x] Add create-note-from-item action.
 
 ### AI
 
