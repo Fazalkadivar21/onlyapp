@@ -15,11 +15,16 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
   const [slackDraft, setSlackDraft] = useState("");
   const [slackSending, setSlackSending] = useState(false);
   const [slackResult, setSlackResult] = useState<string>();
+  const [summarizing, setSummarizing] = useState(false);
+  const [summary, setSummary] = useState<string>();
+  const [summaryError, setSummaryError] = useState<string>();
 
   useEffect(() => {
     setSlackDraft("");
     setSlackResult(undefined);
     setDraftError(undefined);
+    setSummary(undefined);
+    setSummaryError(undefined);
   }, [item?.id]);
 
   async function generateReplyDraft() {
@@ -41,6 +46,27 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
       return undefined;
     } finally {
       setDrafting(false);
+    }
+  }
+
+  async function summarizeActivity() {
+    if (!item) return;
+    setSummarizing(true);
+    setSummaryError(undefined);
+
+    try {
+      const response = await fetch("/api/ai/activity-summary", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source: item.source, type: item.type, title: item.title, body: item.body, actorName: item.actorName, metadata: item.metadata })
+      });
+      const payload = (await response.json()) as { summary?: string; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "summary_failed");
+      setSummary(payload.summary ?? "No summary generated.");
+    } catch (error) {
+      setSummaryError(error instanceof Error ? error.message : "summary_failed");
+    } finally {
+      setSummarizing(false);
     }
   }
 
@@ -107,6 +133,16 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
       </dl>
 
       <div className="mt-6 grid gap-2">
+        <button
+          type="button"
+          onClick={() => void summarizeActivity()}
+          disabled={summarizing}
+          className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium disabled:opacity-50"
+        >
+          {summarizing ? "Summarizing…" : "Summarize with AI"}
+        </button>
+        {summary ? <div className="whitespace-pre-wrap rounded-2xl bg-zinc-50 p-4 text-sm leading-6 text-zinc-700">{summary}</div> : null}
+        {summaryError ? <p className="text-xs text-amber-700">Summary failed: {summaryError}</p> : null}
         <div className="grid grid-cols-3 gap-2">
           {(["seen", "done", "snoozed"] as const).map((status) => (
             <button

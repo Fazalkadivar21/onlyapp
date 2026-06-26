@@ -56,6 +56,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Daily Brief can now be queued as a BullMQ worker job; worker calls back into the app to generate/cache the brief and updates `sync_jobs` status.
 - Inbox WhatsApp detail panel can generate suggested AI reply drafts via `/api/ai/reply-draft`, with heuristic fallback when no provider is configured.
 - Inbox Slack ActivityItem detail panel now has inline Slack thread/channel reply sending and AI draft generation.
+- ActivityItem detail panel now has AI summaries via `/api/ai/activity-summary` with heuristic fallback for Slack, WhatsApp, GitHub, and Jira items.
 
 ## Immediate priority
 
@@ -184,9 +185,10 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Add async summary jobs.
 - [x] Cache summaries.
 - [x] Generate Daily Brief.
+- [x] Generate ActivityItem summaries.
 - [ ] Generate Slack thread summaries.
 - [ ] Generate WhatsApp chat summaries.
-- [ ] Generate PR summaries.
+- [x] Generate PR summaries.
 - [ ] Generate sprint summaries.
 - [x] Generate suggested reply drafts.
 

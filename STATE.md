@@ -50,6 +50,7 @@ Implemented:
 - Daily Brief UI can queue generation through BullMQ when `REDIS_URL` is configured. The worker processes `daily-brief` jobs by calling back into `/api/daily-brief`, and `/api/internal/sync-jobs` lets the worker mark queued jobs processing/completed/failed.
 - ActivityItem detail panel can generate suggested WhatsApp reply drafts through `/api/ai/reply-draft`; it uses the configured AI provider when available and a heuristic fallback otherwise, then prefills the WhatsApp composer.
 - Slack ActivityItems in the Inbox detail panel now expose an inline reply composer that sends via `/api/messages/slack`, replies in the source thread when metadata contains a thread/root timestamp, and can fill from the same AI reply-draft endpoint.
+- ActivityItem detail panel can generate concise AI summaries for Slack, WhatsApp, GitHub, and Jira items through `/api/ai/activity-summary`, with metadata scrubbing and heuristic fallback. This covers thin PR summaries for synced GitHub PR ActivityItems.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
 - DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, note links, AI summary cache lookups, and sync job health queries.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
@@ -129,6 +130,7 @@ packages/integrations
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding async Daily Brief queue jobs — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding suggested WhatsApp reply drafts — passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Inbox Slack reply actions — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding ActivityItem/PR summaries — passed.
 
 Notes:
 
