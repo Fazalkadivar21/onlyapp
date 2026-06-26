@@ -96,6 +96,7 @@ type ActivityQuery = {
   priorities: ActivityPriority[];
   statuses: ActivityStatus[];
   q?: string;
+  actionOnly: boolean;
   limit: number;
   offset: number;
 };
@@ -106,6 +107,7 @@ function parseActivityQuery(searchParams: URLSearchParams): ActivityQuery {
     priorities: parseEnumList(searchParams.get("priorities"), priorities),
     statuses: parseEnumList(searchParams.get("statuses"), statuses),
     q: cleanSearch(searchParams.get("q")),
+    actionOnly: searchParams.get("actionOnly") === "true",
     limit: clampNumber(searchParams.get("limit"), 1, 100, 100),
     offset: clampNumber(searchParams.get("offset"), 0, 10_000, 0)
   };
@@ -117,6 +119,10 @@ function buildActivityConditions(query: ActivityQuery) {
   if (query.sources.length > 0) conditions.push(inArray(activityItems.source, query.sources));
   if (query.priorities.length > 0) conditions.push(inArray(activityItems.priority, query.priorities));
   if (query.statuses.length > 0) conditions.push(inArray(activityItems.status, query.statuses));
+  if (query.actionOnly) {
+    const actionMatch = or(eq(activityItems.status, "unread"), inArray(activityItems.priority, ["urgent", "high"]));
+    if (actionMatch) conditions.push(actionMatch);
+  }
   if (query.q) {
     const pattern = `%${escapeLike(query.q)}%`;
     const textMatch = or(
@@ -137,6 +143,7 @@ function filterMockItems(items: ActivityItem[], query: ActivityQuery) {
       if (query.sources.length > 0 && !query.sources.includes(item.source)) return false;
       if (query.priorities.length > 0 && !query.priorities.includes(item.priority)) return false;
       if (query.statuses.length > 0 && !query.statuses.includes(item.status)) return false;
+      if (query.actionOnly && item.status !== "unread" && item.priority !== "urgent" && item.priority !== "high") return false;
       if (query.q) {
         const haystack = `${item.title} ${item.body} ${item.actorName} ${item.type}`.toLowerCase();
         if (!haystack.includes(query.q.toLowerCase())) return false;

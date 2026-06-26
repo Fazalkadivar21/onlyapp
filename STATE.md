@@ -43,6 +43,7 @@ Implemented:
 - Workspace shell includes a client command palette opened with ⌘K/Ctrl+K for quick page navigation.
 - Activity feeds and integration panels now show skeleton loading cards plus retryable error notices for failed fetches.
 - Unified Inbox search now queries `/api/activity-items` by title/body/actor/type and supports source/status/priority query filters with mock fallback.
+- Activity feeds now request paginated ActivityItems with `limit`/`offset`, expose Load More, and send action-queue filtering to the API instead of only filtering the first page client-side.
 - Integrations page now includes a Sync Health panel backed by `/api/sync-health`; it checks key env configuration, WhatsApp connector `/health`, recent failed outbound messages, and recent `sync_jobs` without exposing message bodies or secrets.
 - DB schema now has practical indexes for inbox reads, source/sourceId dedupe, message health queries, notes ordering, note links, AI summary cache lookups, and sync job health queries.
 - WhatsApp connector handles incoming media from selected chats: image/video/document/audio messages are downloaded through Baileys, uploaded to Cloudinary when Cloudinary env vars are configured, and forwarded as ActivityItems with media metadata. If Cloudinary is not configured, media ActivityItems are still forwarded with an upload-skipped marker.
@@ -115,6 +116,7 @@ packages/integrations
 - Ran `pnpm db:generate` after adding `note_links` — passed and generated `packages/db/drizzle/0001_fancy_leopardon.sql`.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after ActivityItem linked-note creation — passed. Initial parallel `pnpm lint` + `pnpm build` hit the known `.next/types` race; rerunning lint after build passed.
 - Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding Inbox ActivityItem search — passed.
+- Re-ran `pnpm typecheck`, `pnpm build`, and `pnpm lint` after adding ActivityItem feed pagination — passed.
 
 Notes:
 
@@ -143,7 +145,7 @@ Notes:
 3. Smoke-test GitHub PR activity search qualifiers with a real token/repo set.
 4. Smoke-test Jira sprint progress/status grouping with a real Jira board.
 5. Apply DB migrations once `DATABASE_URL` target is confirmed, including `note_links`.
-6. Add virtualized lists or pagination once feeds/chats are large enough to need it.
+6. Continue high-risk real-service smoke tests: WhatsApp Railway restart, Slack OAuth, GitHub search qualifiers, and Jira board grouping.
 
 ## Known blockers / missing information
 

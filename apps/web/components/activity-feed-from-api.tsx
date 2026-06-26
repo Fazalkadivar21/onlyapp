@@ -19,8 +19,10 @@ type Filter = {
   q?: string;
 };
 
+const pageSize = 50;
+
 export function ActivityFeedFromApi({ filter = {}, selectedId, itemOverrides = {}, onSelect }: { filter?: Filter; selectedId?: string; itemOverrides?: Record<string, Partial<ActivityItem>>; onSelect?: (item: ActivityItem) => void }) {
-  const { items, source, error, loading, retry } = useActivityItems(filter);
+  const { items, source, error, loading, loadingMore, hasMore, retry, loadMore } = useActivityItems(filter);
   const mergedItems = useMemo(() => items.map((item) => ({ ...item, ...itemOverrides[item.id] })), [items, itemOverrides]);
   const filteredItems = useMemo(() => filterItems(mergedItems, filter), [mergedItems, filter]);
 
@@ -37,6 +39,18 @@ export function ActivityFeedFromApi({ filter = {}, selectedId, itemOverrides = {
       {error && items.length === 0 ? <ErrorNotice title="Activity failed to load" message="Showing no cached items. Retry when the backend is available." action={<button type="button" onClick={retry} className="rounded-full bg-red-900 px-3 py-1 text-xs font-medium text-white">Retry</button>} /> : null}
       {error && items.length === 0 ? <div className="mt-4" /> : null}
       <ActivityFeed items={filteredItems} selectedId={selectedId} onSelect={onSelect} />
+      {hasMore ? (
+        <div className="mt-5 flex justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loadingMore ? "Loading…" : "Load more"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -61,6 +75,8 @@ function useActivityItems(filter: Filter = {}) {
   const [source, setSource] = useState<ActivityItemsResponse["source"]>("mock");
   const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
@@ -68,19 +84,20 @@ function useActivityItems(filter: Filter = {}) {
     setLoading(true);
     setError(undefined);
 
-    fetch(`/api/activity-items${queryString}`)
-      .then((response) => response.json() as Promise<ActivityItemsResponse>)
+    fetchActivityItems(queryString, 0)
       .then((data) => {
         if (cancelled) return;
-        setItems(data.items.map((item) => ({ ...item, createdAt: new Date(item.createdAt), updatedAt: new Date(item.updatedAt) })));
+        setItems(toActivityItems(data.items));
         setSource(data.source);
         setError(data.error);
+        setHasMore(data.items.length === pageSize);
       })
       .catch(() => {
         if (!cancelled) {
           setItems([]);
           setSource("mock");
           setError("request_failed");
+          setHasMore(false);
         }
       })
       .finally(() => {
@@ -92,7 +109,25 @@ function useActivityItems(filter: Filter = {}) {
     };
   }, [retryNonce, queryString]);
 
-  return { items, source, error, loading, retry: () => setRetryNonce((value) => value + 1) };
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    setError(undefined);
+
+    try {
+      const data = await fetchActivityItems(queryString, items.length);
+      setItems((current) => [...current, ...toActivityItems(data.items)]);
+      setSource(data.source);
+      setError(data.error);
+      setHasMore(data.items.length === pageSize);
+    } catch {
+      setError("request_failed");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  return { items, source, error, loading, loadingMore, hasMore, retry: () => setRetryNonce((value) => value + 1), loadMore };
 }
 
 function filterItems(items: ActivityItem[], filter: Filter) {
@@ -115,7 +150,20 @@ function toQueryString(filter: Filter) {
   if (filter.sources?.length) params.set("sources", filter.sources.join(","));
   if (filter.priorities?.length) params.set("priorities", filter.priorities.join(","));
   if (filter.statuses?.length) params.set("statuses", filter.statuses.join(","));
+  if (filter.actionOnly) params.set("actionOnly", "true");
   if (filter.q?.trim()) params.set("q", filter.q.trim());
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+async function fetchActivityItems(queryString: string, offset: number) {
+  const pageParams = new URLSearchParams({ limit: String(pageSize), offset: String(offset) });
+  const separator = queryString ? "&" : "?";
+  const response = await fetch(`/api/activity-items${queryString}${separator}${pageParams.toString()}`);
+  if (!response.ok) throw new Error("Activity request failed");
+  return response.json() as Promise<ActivityItemsResponse>;
+}
+
+function toActivityItems(items: ActivityItemsResponse["items"]): ActivityItem[] {
+  return items.map((item) => ({ ...item, createdAt: new Date(item.createdAt), updatedAt: new Date(item.updatedAt) }));
 }

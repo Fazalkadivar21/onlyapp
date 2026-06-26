@@ -49,6 +49,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Jira integration panel now shows a sprint progress widget with done/in-progress/todo/blocked/unassigned counts and status breakdown.
 - Notes can now be created from ActivityItems via the inbox detail panel, with `note_links` persisted in DB.
 - Unified Inbox now has text search backed by `/api/activity-items?q=...`, including synced WhatsApp ActivityItems.
+- Activity feeds now load ActivityItems in pages with a Load More button and server-side action queue filtering.
 
 ## Immediate priority
 
@@ -186,7 +187,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 
 - [x] Add optimistic sending for WhatsApp text composer.
 - [x] Add skeleton loading.
-- [ ] Add virtualized lists.
+- [x] Add feed pagination.
 - [x] Add DB indexes.
 - [x] Add command palette.
 - [x] Add keyboard shortcuts.
