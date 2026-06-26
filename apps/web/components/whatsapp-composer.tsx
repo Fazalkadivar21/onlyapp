@@ -24,7 +24,7 @@ type LocalSend = {
   error?: string;
 };
 
-export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: string; draft?: string; nonce: number } }) {
+export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: string; draft?: string; quotedMessageId?: string; nonce: number } }) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
@@ -33,6 +33,7 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
   const [fileName, setFileName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>();
+  const [quotedMessageId, setQuotedMessageId] = useState<string>();
   const [loadingChats, setLoadingChats] = useState(true);
   const [sends, setSends] = useState<LocalSend[]>([]);
 
@@ -60,6 +61,7 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
     if (!replyTarget) return;
     setTo(replyTarget.chatId);
     setText(replyTarget.draft ?? "");
+    setQuotedMessageId(replyTarget.quotedMessageId);
   }, [replyTarget]);
 
   async function uploadFile(file: File | undefined) {
@@ -92,14 +94,20 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
     const localId = crypto.randomUUID();
     const label = trimmedMediaUrl ? `${trimmed || `[${mediaType}]`} · ${trimmedMediaUrl}` : trimmed;
     setSends((current) => [{ id: localId, to, text: label, status: "pending" }, ...current]);
+    const quoteId = quotedMessageId;
     setText("");
     setMediaUrl("");
+    setQuotedMessageId(undefined);
 
     try {
       const response = await fetch("/api/messages/whatsapp", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(trimmedMediaUrl ? { to, mediaUrl: trimmedMediaUrl, mediaType, caption: trimmed || undefined, fileName: fileName.trim() || undefined } : { to, text: trimmed })
+        body: JSON.stringify(
+          trimmedMediaUrl
+            ? { to, mediaUrl: trimmedMediaUrl, mediaType, caption: trimmed || undefined, fileName: fileName.trim() || undefined, quotedMessageId: quoteId }
+            : { to, text: trimmed, quotedMessageId: quoteId }
+        )
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
 
@@ -119,6 +127,13 @@ export function WhatsAppComposer({ replyTarget }: { replyTarget?: { chatId: stri
         </div>
         <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs">{loadingChats ? "loading" : `${chats.length} selected`}</span>
       </div>
+
+      {quotedMessageId ? (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="truncate">Reply will quote WhatsApp message {quotedMessageId}</span>
+          <button type="button" onClick={() => setQuotedMessageId(undefined)} className="shrink-0 font-medium">Clear quote</button>
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-3 md:grid-cols-[260px_1fr_auto]">
         <select value={to} onChange={(event) => setTo(event.target.value)} className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm" disabled={!to && chats.length === 0}>

@@ -28,6 +28,7 @@ type ChatSummary = {
 type SendTextInput = {
   to: string;
   text: string;
+  quotedMessageId?: string;
 };
 
 type SendMediaInput = {
@@ -37,6 +38,7 @@ type SendMediaInput = {
   caption?: string;
   fileName?: string;
   mimeType?: string;
+  quotedMessageId?: string;
 };
 
 type MediaInfo = {
@@ -60,6 +62,8 @@ let lastSessionBackupAt: string | null = null;
 let lastSessionBackupError: string | null = null;
 const chats = new Map<string, ChatSummary>();
 const selectedChatIds = new Set(parseCsv(process.env.WHATSAPP_SELECTED_CHATS));
+const recentMessages = new Map<string, WAMessage>();
+const maxRecentMessages = 500;
 
 export async function startWhatsApp() {
   if (socket || status === "connecting") return getWhatsAppState();
@@ -191,8 +195,9 @@ export async function sendWhatsAppText(input: SendTextInput) {
     throw new Error("Both 'to' and 'text' are required");
   }
 
-  const result = await connectedSocket.sendMessage(input.to, { text: input.text });
-  return { id: result?.key.id ?? null, to: input.to };
+  const quoted = input.quotedMessageId ? recentMessages.get(input.quotedMessageId) : undefined;
+  const result = await connectedSocket.sendMessage(input.to, { text: input.text }, quoted ? { quoted } : undefined);
+  return { id: result?.key.id ?? null, to: input.to, quoted: input.quotedMessageId ? Boolean(quoted) : false };
 }
 
 export async function sendWhatsAppMedia(input: SendMediaInput) {
@@ -209,8 +214,9 @@ export async function sendWhatsAppMedia(input: SendMediaInput) {
     input.mediaType === "audio" ? { audio: media, mimetype: input.mimeType } :
     { document: media, fileName: input.fileName ?? "file", mimetype: input.mimeType ?? "application/octet-stream", caption: input.caption };
 
-  const result = await connectedSocket.sendMessage(input.to, message);
-  return { id: result?.key.id ?? null, to: input.to };
+  const quoted = input.quotedMessageId ? recentMessages.get(input.quotedMessageId) : undefined;
+  const result = await connectedSocket.sendMessage(input.to, message, quoted ? { quoted } : undefined);
+  return { id: result?.key.id ?? null, to: input.to, quoted: input.quotedMessageId ? Boolean(quoted) : false };
 }
 
 function getConnectedSocket() {
@@ -230,6 +236,7 @@ async function forwardIncomingMessage(message: WAMessage) {
 
   if (!remoteJid || !messageId || !text || !selectedChatIds.has(remoteJid)) return;
 
+  rememberRecentMessage(messageId, message);
   const uploadedMedia = media ? await uploadIncomingMedia(message, messageId, media) : null;
   const chat = chats.get(remoteJid);
   const actorName = message.pushName ?? chat?.name ?? remoteJid;
@@ -260,6 +267,15 @@ async function forwardIncomingMessage(message: WAMessage) {
 
   if (!response.ok) {
     throw new Error(`Failed to forward WhatsApp message: ${response.status}`);
+  }
+}
+
+function rememberRecentMessage(messageId: string, message: WAMessage) {
+  recentMessages.set(messageId, message);
+  while (recentMessages.size > maxRecentMessages) {
+    const oldestKey = recentMessages.keys().next().value;
+    if (!oldestKey) break;
+    recentMessages.delete(oldestKey);
   }
 }
 

@@ -59,6 +59,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - ActivityItem detail panel now has AI summaries via `/api/ai/activity-summary` with heuristic fallback for Slack, WhatsApp, GitHub, and Jira items.
 - Jira sync now updates existing issue ActivityItems and creates separate `issue_status_change` ActivityItems when a synced issue status changes.
 - GitHub webhook endpoint added for pull request, PR comment, PR review, and failed check events, with optional HMAC signature verification.
+- WhatsApp quote reply is wired for recently received selected-chat messages via `quotedMessageId` from Inbox detail to connector send.
 
 ## Immediate priority
 
@@ -137,7 +138,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Receive/download images/videos/files.
 - [x] Upload media to Cloudinary.
 - [x] Send images/videos/files.
-- [ ] Implement quote reply if supported.
+- [x] Implement quote reply if supported for recently received messages.
 - [ ] Implement group mentions if reliable.
 - [x] Search synced WhatsApp messages.
 

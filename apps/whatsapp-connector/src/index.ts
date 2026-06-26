@@ -45,7 +45,7 @@ app.post("/send", async (c) => {
   const body = await c.req.json().catch(() => null);
 
   if (!isSendTextBody(body) && !isSendMediaBody(body)) {
-    return c.json({ error: "Expected JSON body: { to: string, text: string } or { to: string, mediaUrl: string, mediaType: image|video|document|audio }" }, 400);
+    return c.json({ error: "Expected JSON body: { to: string, text: string } or { to: string, mediaUrl: string, mediaType: image|video|document|audio }. Optional quotedMessageId quotes a recent incoming message." }, 400);
   }
 
   try {
@@ -66,15 +66,17 @@ if (process.env.WHATSAPP_AUTO_CONNECT === "true") {
   });
 }
 
-function isSendTextBody(value: unknown): value is { to: string; text: string } {
-  return typeof value === "object" && value !== null && "to" in value && "text" in value && typeof value.to === "string" && typeof value.text === "string";
+function isSendTextBody(value: unknown): value is { to: string; text: string; quotedMessageId?: string } {
+  if (typeof value !== "object" || value === null) return false;
+  const body = value as Record<string, unknown>;
+  return typeof body.to === "string" && typeof body.text === "string" && (body.quotedMessageId === undefined || typeof body.quotedMessageId === "string");
 }
 
 function isSelectedChatsBody(value: unknown): value is { chatIds: string[] } {
   return typeof value === "object" && value !== null && "chatIds" in value && Array.isArray(value.chatIds) && value.chatIds.every((chatId) => typeof chatId === "string");
 }
 
-function isSendMediaBody(value: unknown): value is { to: string; mediaUrl: string; mediaType: "image" | "video" | "document" | "audio"; caption?: string; fileName?: string; mimeType?: string } {
+function isSendMediaBody(value: unknown): value is { to: string; mediaUrl: string; mediaType: "image" | "video" | "document" | "audio"; caption?: string; fileName?: string; mimeType?: string; quotedMessageId?: string } {
   if (typeof value !== "object" || value === null) return false;
   const body = value as Record<string, unknown>;
   return (
@@ -83,6 +85,7 @@ function isSendMediaBody(value: unknown): value is { to: string; mediaUrl: strin
     ["image", "video", "document", "audio"].includes(String(body.mediaType)) &&
     (body.caption === undefined || typeof body.caption === "string") &&
     (body.fileName === undefined || typeof body.fileName === "string") &&
-    (body.mimeType === undefined || typeof body.mimeType === "string")
+    (body.mimeType === undefined || typeof body.mimeType === "string") &&
+    (body.quotedMessageId === undefined || typeof body.quotedMessageId === "string")
   );
 }

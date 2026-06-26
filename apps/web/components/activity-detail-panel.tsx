@@ -7,6 +7,7 @@ import { PriorityBadge, SourceBadge, StatusBadge } from "./badges";
 type ReplyTarget = {
   chatId: string;
   draft?: string;
+  quotedMessageId?: string;
 };
 
 export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNote }: { item?: ActivityItem; onReply: (target: ReplyTarget) => void; onStatusChange: (status: ActivityStatus) => void; onCreateNote: (item: ActivityItem) => void }) {
@@ -101,6 +102,7 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
   }
 
   const whatsappChatId = item.source === "whatsapp" ? stringMetadata(item.metadata, "chatId") : undefined;
+  const whatsappMessageId = item.source === "whatsapp" ? stringMetadata(item.metadata, "messageId") : undefined;
   const slackChannelId = item.source === "slack" ? stringMetadata(item.metadata, "channelId") : undefined;
   const slackThreadTs = item.source === "slack" ? (stringMetadata(item.metadata, "threadTs") ?? stringMetadata(item.metadata, "ts")) : undefined;
 
@@ -165,6 +167,15 @@ export function ActivityDetailPanel({ item, onReply, onStatusChange, onCreateNot
             >
               Reply on WhatsApp
             </button>
+            {whatsappMessageId ? (
+              <button
+                type="button"
+                onClick={() => onReply({ chatId: whatsappChatId, quotedMessageId: whatsappMessageId, draft: `Re: ${item.actorName} — ` })}
+                className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium"
+              >
+                Reply quoting message
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={async () => {

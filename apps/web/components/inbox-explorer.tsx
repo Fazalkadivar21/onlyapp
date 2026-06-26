@@ -13,7 +13,7 @@ export function InboxExplorer() {
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("all");
   const [selectedItem, setSelectedItem] = useState<ActivityItem | undefined>();
   const [itemOverrides, setItemOverrides] = useState<Record<string, Partial<ActivityItem>>>({});
-  const [replyTarget, setReplyTarget] = useState<{ chatId: string; draft?: string; nonce: number } | undefined>();
+  const [replyTarget, setReplyTarget] = useState<{ chatId: string; draft?: string; quotedMessageId?: string; nonce: number } | undefined>();
   const [search, setSearch] = useState("");
   const filter = activeFilter === "all" ? { q: search } : { sources: [activeFilter], q: search };
 

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 type SendResponse = {
   status: "sent";
-  result?: { id?: string | null; to?: string };
+  result?: { id?: string | null; to?: string; quoted?: boolean };
 };
 
 type WhatsAppSendBody = {
@@ -16,6 +16,7 @@ type WhatsAppSendBody = {
   caption?: string;
   fileName?: string;
   mimeType?: string;
+  quotedMessageId?: string;
 };
 
 export async function POST(request: Request) {
@@ -30,7 +31,11 @@ export async function POST(request: Request) {
   }
 
   const messageBody = body.mediaUrl ? (body.caption || `[${body.mediaType}] ${body.mediaUrl}`) : (body.text ?? "");
-  const dbMessageId = await createPendingMessage(body.to, messageBody, body.mediaUrl ? { mediaUrl: body.mediaUrl, mediaType: body.mediaType, fileName: body.fileName, mimeType: body.mimeType } : undefined);
+  const dbMessageId = await createPendingMessage(
+    body.to,
+    messageBody,
+    body.mediaUrl ? { mediaUrl: body.mediaUrl, mediaType: body.mediaType, fileName: body.fileName, mimeType: body.mimeType, quotedMessageId: body.quotedMessageId } : { quotedMessageId: body.quotedMessageId }
+  );
 
   try {
     const response = await fetch(`${baseUrl}/send`, {
@@ -39,7 +44,11 @@ export async function POST(request: Request) {
         "content-type": "application/json",
         ...(process.env.WHATSAPP_CONNECTOR_TOKEN ? { authorization: `Bearer ${process.env.WHATSAPP_CONNECTOR_TOKEN}` } : {})
       },
-      body: JSON.stringify(body.mediaUrl ? { to: body.to, mediaUrl: body.mediaUrl, mediaType: body.mediaType, caption: body.caption, fileName: body.fileName, mimeType: body.mimeType } : { to: body.to, text: body.text })
+      body: JSON.stringify(
+        body.mediaUrl
+          ? { to: body.to, mediaUrl: body.mediaUrl, mediaType: body.mediaType, caption: body.caption, fileName: body.fileName, mimeType: body.mimeType, quotedMessageId: body.quotedMessageId }
+          : { to: body.to, text: body.text, quotedMessageId: body.quotedMessageId }
+      )
     });
 
     const payload = (await response.json().catch(() => ({}))) as Partial<SendResponse> & { error?: string };
@@ -55,7 +64,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function createPendingMessage(conversationId: string, body: string, media?: Record<string, string | undefined>) {
+async function createPendingMessage(conversationId: string, body: string, sendMetadata?: Record<string, string | undefined>) {
   if (!process.env.DATABASE_URL) return null;
 
   const db = createDb();
@@ -67,7 +76,7 @@ async function createPendingMessage(conversationId: string, body: string, media?
       senderName: "Me",
       body,
       status: "pending",
-      metadata: { direction: "outgoing", media }
+      metadata: { direction: "outgoing", ...sendMetadata }
     })
     .returning({ id: messages.id });
 
@@ -98,6 +107,7 @@ function isSendBody(value: unknown): value is WhatsAppSendBody {
     (hasText || hasMedia) &&
     (value.caption === undefined || typeof value.caption === "string") &&
     (value.fileName === undefined || typeof value.fileName === "string") &&
-    (value.mimeType === undefined || typeof value.mimeType === "string")
+    (value.mimeType === undefined || typeof value.mimeType === "string") &&
+    (value.quotedMessageId === undefined || typeof value.quotedMessageId === "string")
   );
 }
