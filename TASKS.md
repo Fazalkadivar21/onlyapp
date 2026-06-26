@@ -51,6 +51,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - Unified Inbox now has text search backed by `/api/activity-items?q=...`, including synced WhatsApp ActivityItems.
 - Activity feeds now load ActivityItems in pages with a Load More button and server-side action queue filtering.
 - GitHub PR sync now extracts Jira issue keys from PR titles, stores them in ActivityItem metadata, and shows Jira key badges in the GitHub panel.
+- Next.js route/global error boundaries added with retry/home recovery UI and scrubbed error display.
 
 ## Immediate priority
 
@@ -194,7 +195,7 @@ Repository now has an initial pnpm/Turborepo monorepo scaffold with web, worker,
 - [x] Add keyboard shortcuts.
 - [x] Add retry states.
 - [x] Add sync health UI.
-- [ ] Add error boundaries.
+- [x] Add error boundaries.
 
 ## High-risk validation tasks
 
